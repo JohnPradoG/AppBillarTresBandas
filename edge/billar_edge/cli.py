@@ -8,7 +8,7 @@ import sys
 from datetime import datetime
 
 from . import config as config_mod
-from . import events, health, recorder, retention, statefile
+from . import events, health, live, recorder, retention, statefile, web
 from .db import connect
 
 
@@ -23,6 +23,9 @@ def main(argv: list[str] | None = None) -> int:
     sub = parser.add_subparsers(dest="command", required=True)
     p = sub.add_parser("record", help="graba una cámara de forma continua (servicio)")
     p.add_argument("camera_id")
+    p = sub.add_parser("live", help="señal en vivo de una cámara para la pantalla (servicio)")
+    p.add_argument("camera_id")
+    sub.add_parser("ui", help="servidor local de la pantalla táctil (servicio)")
     sub.add_parser("health", help="monitor de salud (servicio)")
     sub.add_parser("retention", help="borra los segmentos vencidos (lo ejecuta un temporizador)")
     sub.add_parser("status", help="muestra el estado actual")
@@ -41,6 +44,10 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "record":
         recorder.main(cfg, args.camera_id)
+    elif args.command == "live":
+        live.main(cfg, args.camera_id)
+    elif args.command == "ui":
+        web.main(cfg)
     elif args.command == "health":
         health.main(cfg)
     elif args.command == "retention":

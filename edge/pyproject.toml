@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "billar-edge"
 version = "0.1.0"
-description = "Servicios de grabación de cada mesa: grabación continua, índice, limpieza y monitor de salud."
+description = "Servicios de cada mesa: grabación continua, índice, limpieza, monitor de salud y pantalla táctil."
 requires-python = ">=3.12"
 dependencies = []
 
@@ -17,6 +17,9 @@ billar = "billar_edge.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["billar_edge*"]
+
+[tool.setuptools.package-data]
+billar_edge = ["static/*", "static/**/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

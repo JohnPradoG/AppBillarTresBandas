@@ -18,6 +18,11 @@ segment_seconds = 60          # segmentos de 1 minuto alineados al reloj
 stall_seconds = 15            # sin avance => se reinicia la grabación
 no_signal_seconds = 30        # imagen negra o congelada => SIN SEÑAL
 
+[ui]
+host = "127.0.0.1"            # la pantalla solo se sirve al propio equipo
+port = 8080
+idle_minutes = 20          # minutos sin tocar la pantalla antes del modo reposo
+
 [[cameras]]
 id = "mesa1-principal"        # letras, números y guiones
 table_number = 1

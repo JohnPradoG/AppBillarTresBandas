@@ -32,14 +32,22 @@ UUID=<uuid-de-la-particion>  /srv/billar/video  ext4  defaults,noatime,nofail  0
 
 ## 4. Programa
 
-Ver el README: `sudo ./deploy/install.sh`, editar `/etc/billar/billar.toml` y volver a ejecutarlo.
+Ver el README: `sudo ./deploy/install.sh`, editar `/etc/billar/billar.toml` y volver a ejecutarlo. El instalador también instala `cage` y Google Chrome (gratuito) para la pantalla táctil.
 
-## 5. Comprobar
+## 5. Pantalla táctil
+
+- Conectar la pantalla al mini PC por HDMI (imagen) y USB (tacto) antes de encender.
+- Al arrancar, la pantalla muestra la vista Mesa sola, sin escritorio ni inicio de sesión. Ocupa la consola `tty1`; para entrar por teclado usar `Ctrl+Alt+F2`.
+- Para que la pantalla no se apague: añadir `consoleblank=0` a `GRUB_CMDLINE_LINUX_DEFAULT` en `/etc/default/grub` y ejecutar `sudo update-grub`.
+- Si el tacto queda desalineado o girado, se corrige con una regla de `udev` para esa pantalla (se documenta cuando tengamos el modelo definitivo).
+
+## 6. Comprobar
 
 ```bash
 billar --config /etc/billar/billar.toml status   # GRABANDO
 billar --config /etc/billar/billar.toml events   # registro de eventos
 ls /srv/billar/video/<camara>/                   # un archivo por minuto
+systemctl status billar-live@<camara> billar-ui billar-kiosk
 ```
 
-Prueba de corte de luz: desenchufar el equipo, volver a enchufarlo y comprobar sin tocar nada que vuelve a GRABANDO y que `events` muestra "apagado inesperado" y "Grabación iniciada automáticamente".
+Prueba de corte de luz: desenchufar el equipo, volver a enchufarlo y comprobar sin tocar nada que vuelve a GRABANDO, que la pantalla vuelve sola a la vista Mesa y que `events` muestra "apagado inesperado" y "Grabación iniciada automáticamente".

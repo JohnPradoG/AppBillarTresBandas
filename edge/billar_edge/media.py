@@ -50,6 +50,43 @@ def recorder_command(ffmpeg: str, camera: CameraConfig, out_dir: Path, run_dir: 
     return cmd
 
 
+LIVE_PLAYLIST = "index.m3u8"
+# Lo que la pantalla puede pedir hacia atrás: el retraso máximo (60 s) más margen.
+LIVE_WINDOW_SECONDS = 75
+
+
+def live_command(ffmpeg: str, camera: CameraConfig, live_dir: Path) -> list[str]:
+    """Señal para la pantalla: HLS con trozos de 1 s en memoria (/run), sin recomprimir.
+
+    Los trozos van en MP4 fragmentado, que el navegador reproduce directamente
+    (con MPEG-TS tendría que convertirlos él mismo, gastando procesador).
+
+    Es un proceso aparte del grabador, con su propia conexión a la cámara, para
+    que un fallo de la pantalla nunca detenga la grabación. Guarda los últimos
+    75 s: la pantalla se mantiene N segundos detrás del borde en vivo.
+    """
+    cmd = [ffmpeg, "-hide_banner", "-nostdin", "-loglevel", "warning"]
+    if camera.url.startswith("rtsp://"):
+        cmd += ["-rtsp_transport", "tcp", "-timeout", "5000000"]
+    cmd += list(camera.input_args)
+    cmd += ["-i", camera.url]
+    cmd += [
+        "-map", "0:v:0", "-c", "copy",
+        "-f", "hls",
+        "-hls_time", "1",
+        "-hls_list_size", str(LIVE_WINDOW_SECONDS),
+        "-hls_delete_threshold", "5",
+        "-hls_segment_type", "fmp4",
+        "-hls_fmp4_init_filename", "init.mp4",
+        "-hls_flags", "delete_segments+omit_endlist+temp_file+independent_segments",
+        # Números de secuencia siempre crecientes, también tras un reinicio.
+        "-hls_start_number_source", "epoch",
+        "-hls_segment_filename", str(live_dir / "s%d.m4s"),
+        str(live_dir / LIVE_PLAYLIST),
+    ]
+    return cmd
+
+
 def recorder_env() -> dict[str, str]:
     # Los nombres de archivo usan la hora UTC, independiente de la zona del equipo.
     return {**os.environ, "TZ": "UTC"}

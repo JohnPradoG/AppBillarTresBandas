@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Mesa</title>
+<link rel="stylesheet" href="app.css">
+<script src="vendor/hls.light.min.js"></script>
+<script type="module" src="app.js"></script>
+</head>
+<body>
+<main class="screen">
+
+  <section class="panel p1" data-player="0" aria-label="Jugador 1">
+    <header class="panel-head">
+      <span class="name"><span class="ball white"></span><span data-name>Jugador 1</span></span>
+      <span class="turn-badge" data-badge></span>
+    </header>
+    <div class="pm">
+      <button class="minus" data-sub aria-label="Restar carambola al jugador 1">−</button>
+      <button class="plus" data-add="1" aria-label="Sumar carambola al jugador 1">+</button>
+    </div>
+    <div class="score" data-score>0</div>
+    <div class="quick">
+      <span class="caption">Sumar serie rápida</span>
+      <div class="quick-row">
+        <button data-add="2">2</button><button data-add="3">3</button><button data-add="4">4</button><button data-add="5">5</button>
+      </div>
+    </div>
+    <div class="stats">
+      <div class="stat"><span class="caption">Serie mayor</span><span class="num" data-best>0</span></div>
+      <div class="stat"><span class="caption">Promedio</span><span class="num" data-avg>0,000</span></div>
+    </div>
+  </section>
+
+  <section class="center">
+    <div class="topbar">
+      <div class="table-name">
+        <span class="big" id="table-name">MESA</span>
+        <span class="sub" id="establishment"></span>
+      </div>
+      <div class="clock">
+        <span class="caption">TIEMPO DE PARTIDA</span>
+        <span class="num" id="game-time">00:00:00</span>
+      </div>
+      <div class="shot" id="shot">
+        <span class="caption">TIEMPO PARA TACAR</span>
+        <span class="num" id="shot-time">40</span>
+      </div>
+      <div class="rec" id="rec" role="status">
+        <span class="dot"></span><span id="rec-label">…</span>
+      </div>
+    </div>
+
+    <div class="video-box">
+      <video id="video" muted playsinline disablepictureinpicture></video>
+      <div class="video-msg" id="video-msg">Esperando la imagen de la cámara…</div>
+      <span class="video-age" id="video-age"></span>
+      <span class="brand"><span>VANO SYSTEMS</span></span>
+    </div>
+
+    <div class="row2">
+      <div class="innings"><span class="caption">Entradas</span><span class="num" id="innings">0</span></div>
+      <button class="menu-btn" id="menu-btn">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"></line><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="17" x2="20" y2="17"></line></svg>
+        <span>Jugadas y menú</span>
+      </button>
+    </div>
+    <div class="row3">
+      <button class="replay" id="replay-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"></path><polyline points="3 3 3 8 8 8"></polyline></svg>
+        <span>REPETICIÓN</span>
+      </button>
+      <button class="save" id="save-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>
+        <span>GUARDAR JUGADA</span>
+      </button>
+    </div>
+  </section>
+
+  <section class="panel p2" data-player="1" aria-label="Jugador 2">
+    <header class="panel-head">
+      <span class="name"><span class="ball yellow"></span><span data-name>Jugador 2</span></span>
+      <span class="turn-badge" data-badge></span>
+    </header>
+    <div class="pm">
+      <button class="minus" data-sub aria-label="Restar carambola al jugador 2">−</button>
+      <button class="plus" data-add="1" aria-label="Sumar carambola al jugador 2">+</button>
+    </div>
+    <div class="score" data-score>0</div>
+    <div class="quick">
+      <span class="caption">Sumar serie rápida</span>
+      <div class="quick-row">
+        <button data-add="2">2</button><button data-add="3">3</button><button data-add="4">4</button><button data-add="5">5</button>
+      </div>
+    </div>
+    <div class="stats">
+      <div class="stat"><span class="caption">Serie mayor</span><span class="num" data-best>0</span></div>
+      <div class="stat"><span class="caption">Promedio</span><span class="num" data-avg>0,000</span></div>
+    </div>
+  </section>
+</main>
+
+<div class="sheet" id="menu" hidden>
+  <div class="sheet-card" role="dialog" aria-modal="true" aria-labelledby="menu-title">
+    <h2 id="menu-title">Menú</h2>
+    <h3>Retraso de la pantalla</h3>
+    <div class="delay-row" id="delay-row"></div>
+    <p class="hint">La grabación no cambia: solo cuánto tiempo después ves la jugada en pantalla.</p>
+    <h3>Partida</h3>
+    <button class="wide" id="new-game">Nueva partida</button>
+    <button class="wide close" id="menu-close">Cerrar</button>
+  </div>
+</div>
+
+<div class="sheet" id="confirm" hidden>
+  <div class="sheet-card" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+    <h2 id="confirm-title">¿Empezar una partida nueva?</h2>
+    <p class="hint">El marcador vuelve a cero.</p>
+    <div class="confirm-row">
+      <button class="wide" id="confirm-no">No</button>
+      <button class="wide danger" id="confirm-yes">Sí, nueva partida</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<div class="rest" id="rest" hidden>
+  <div class="rest-card" id="rest-card">
+    <span class="rest-time" id="rest-time">00:00</span>
+    <span class="rest-place" id="rest-place"></span>
+    <span class="rest-table" id="rest-table"></span>
+    <span class="rest-brand">VANO SYSTEMS</span>
+    <span class="rest-hint">Toca la pantalla para jugar</span>
+    <span class="rest-rec" id="rest-rec"></span>
+  </div>
+</div>
+</body>
+</html>

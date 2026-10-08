@@ -39,6 +39,11 @@ class Config:
     require_mount: bool = False
     ffmpeg: str = "ffmpeg"
     ffprobe: str = "ffprobe"
+    # Servidor de la pantalla táctil. Solo local mientras no haya usuarios (Fase 8).
+    ui_host: str = "127.0.0.1"
+    ui_port: int = 8080
+    # Minutos sin tocar la pantalla antes del modo reposo (la grabación sigue).
+    idle_minutes: int = 20
     cameras: tuple[CameraConfig, ...] = field(default_factory=tuple)
 
     @property
@@ -57,6 +62,9 @@ class Config:
     def camera_run_dir(self, camera_id: str) -> Path:
         return self.run_dir / camera_id
 
+    def live_dir(self, camera_id: str) -> Path:
+        return self.camera_run_dir(camera_id) / "live"
+
 
 def load(path: str | os.PathLike | None = None) -> Config:
     path = Path(path or os.environ.get("BILLAR_CONFIG", DEFAULT_CONFIG_PATH))
@@ -65,6 +73,7 @@ def load(path: str | os.PathLike | None = None) -> Config:
     general = raw.get("general", {})
     storage = raw.get("storage", {})
     recorder = raw.get("recorder", {})
+    ui = raw.get("ui", {})
     cameras = tuple(
         CameraConfig(
             id=c["id"],
@@ -93,5 +102,8 @@ def load(path: str | os.PathLike | None = None) -> Config:
         require_mount=bool(storage.get("require_mount", False)),
         ffmpeg=recorder.get("ffmpeg", "ffmpeg"),
         ffprobe=recorder.get("ffprobe", "ffprobe"),
+        ui_host=ui.get("host", "127.0.0.1"),
+        ui_port=int(ui.get("port", 8080)),
+        idle_minutes=int(ui.get("idle_minutes", 20)),
         cameras=cameras,
     )

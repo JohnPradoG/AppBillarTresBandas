@@ -1,0 +1,23 @@
+#!/bin/sh
+# Navegador de la pantalla táctil. Lo lanza billar-kiosk.service dentro de cage.
+URL="http://127.0.0.1:8080/"
+
+# Esperar a que el servidor local responda, para no mostrar una página de error.
+until curl -fs -o /dev/null "${URL}api/state"; do sleep 1; done
+
+for b in google-chrome-stable chromium chromium-browser; do
+  if command -v "$b" >/dev/null 2>&1; then BROWSER="$b"; break; fi
+done
+
+exec "$BROWSER" \
+  --kiosk "$URL" \
+  --ozone-platform=wayland \
+  --user-data-dir="$HOME/navegador" \
+  --no-first-run --noerrdialogs --disable-infobars \
+  --disable-session-crashed-bubble --hide-crash-restore-bubble \
+  --disable-translate --disable-features=Translate,TranslateUI \
+  --disable-pinch --overscroll-history-navigation=0 \
+  --autoplay-policy=no-user-gesture-required \
+  --password-store=basic \
+  --check-for-update-interval=31536000 \
+  --enable-features=VaapiVideoDecodeLinuxGL,VaapiVideoDecoder

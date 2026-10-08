@@ -26,6 +26,8 @@ El mayor riesgo técnico es la calidad de imagen bajo las lámparas del billar. 
 1. **Parpadeo**: grabar 1 minuto con las lámparas encendidas. No deben verse franjas ni cambios de brillo.
 2. **Bola en movimiento**: un tiro fuerte. Ver la repetición a 0,25x y 0,1x: la bola debe verse como bola, no como una mancha larga.
 3. **30 frente a 60 fps**: comparar la cámara lenta. Si 60 fps se ve claramente mejor, se usa 60 y un disco de 2 TB.
-4. **Bitrate real**: dejar grabando 1 hora y mirar el tamaño de los archivos (`du -sh /srv/billar/video/<camara>`). Con 5 Mbps de tope deberían ser menos de 2,25 GB por hora.
+4. **Dos conexiones a la vez**: la grabación y la pantalla abren cada una su conexión RTSP. La cámara debe aceptar al menos 2 (casi todas aceptan 3 o más). Con `systemctl status billar-recorder@<camara> billar-live@<camara>` ambos deben estar activos.
+5. **Retraso exacto**: poner un reloj con segundos (un celular con cronómetro) frente a la cámara y comparar lo que muestra la pantalla con el reloj real. Con 20 s de retraso la diferencia debe ser 20 s, ±1 s. Si siempre sobra o falta lo mismo, se ajusta `EDGE_LAG` en `static/delay.js`.
+6. **Bitrate real**: dejar grabando 1 hora y mirar el tamaño de los archivos (`du -sh /srv/billar/video/<camara>`). Con 5 Mbps de tope deberían ser menos de 2,25 GB por hora.
 
 Anotar los resultados aquí y la configuración elegida, para repetirla en todas las mesas.

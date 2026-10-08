@@ -1,0 +1,15 @@
+[Unit]
+Description=Servidor local de la pantalla táctil
+After=local-fs.target
+StartLimitIntervalSec=0
+
+[Service]
+User=billar
+Group=billar
+Environment=BILLAR_CONFIG=/etc/billar/billar.toml
+ExecStart=/opt/billar/venv/bin/billar ui
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
