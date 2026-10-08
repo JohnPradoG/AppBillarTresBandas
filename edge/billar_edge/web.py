@@ -17,7 +17,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
 
-from . import __version__, settings, statefile
+from . import __version__, replay, settings, statefile
 from .config import Config
 from .db import connect, now_ms
 from .health import STALE_STATE_SECONDS
@@ -26,6 +26,7 @@ log = logging.getLogger("billar.web")
 
 STATIC_DIR = Path(__file__).parent / "static"
 SAFE_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+RANGE = re.compile(r"^bytes=(\d*)-(\d*)$")
 TYPES = {
     ".m3u8": "application/vnd.apple.mpegurl",
     ".m4s": "video/iso.segment",
@@ -81,6 +82,16 @@ class App:
         finally:
             conn.close()
 
+    def build_replay(self, moment_ms: int) -> dict:
+        cam = self.cfg.cameras[0]
+        clip = replay.build(self.cfg, cam.id, moment_ms)
+        return {
+            "url": f"/repeticion/{clip.path.name}",
+            "start_ms": clip.start_ms,
+            "end_ms": clip.end_ms,
+            "moment_ms": clip.moment_ms,
+        }
+
     def live_file(self, camera_id: str, name: str) -> Path | None:
         if not SAFE_NAME.match(camera_id) or not SAFE_NAME.match(name):
             return None
@@ -117,23 +128,48 @@ def make_handler(app: App):
                     if f is not None:
                         return self._file(f, cache="no-store")
                 return self._error(HTTPStatus.NOT_FOUND)
+            if path.startswith("/repeticion/"):
+                f = replay.clip_path(app.cfg, path.split("/", 2)[2])
+                if f is None:
+                    return self._error(HTTPStatus.NOT_FOUND)
+                return self._file(f, cache="no-store")
             f = app.static_file(path)
             if f is None:
                 return self._error(HTTPStatus.NOT_FOUND)
             return self._file(f, cache="no-cache")
+
+        def do_POST(self):
+            path = urlparse(self.path).path
+            if path != "/api/replay":
+                return self._error(HTTPStatus.NOT_FOUND)
+            try:
+                moment_ms = int(self._body()["moment_ms"])
+            except (ValueError, KeyError, TypeError) as e:
+                return self._json({"error": str(e)}, HTTPStatus.BAD_REQUEST)
+            try:
+                clip = app.build_replay(moment_ms)
+            except replay.NoRecording as e:
+                return self._json({"error": str(e)}, HTTPStatus.NOT_FOUND)
+            log.info("Repetición de %s armada", clip["moment_ms"])
+            return self._json(clip)
 
         def do_PUT(self):
             path = urlparse(self.path).path
             if path != "/api/settings/delay":
                 return self._error(HTTPStatus.NOT_FOUND)
             try:
-                length = int(self.headers.get("Content-Length", "0"))
-                body = json.loads(self.rfile.read(min(length, 4096)) or b"{}")
-                seconds = app.set_delay(int(body["seconds"]))
+                seconds = app.set_delay(int(self._body()["seconds"]))
             except (ValueError, KeyError, TypeError) as e:
                 return self._json({"error": str(e)}, HTTPStatus.BAD_REQUEST)
             log.info("Retraso de pantalla cambiado a %s s", seconds)
             return self._json({"delay_seconds": seconds})
+
+        def _body(self) -> dict:
+            length = int(self.headers.get("Content-Length", "0"))
+            body = json.loads(self.rfile.read(min(length, 4096)) or b"{}")
+            if not isinstance(body, dict):
+                raise TypeError("se esperaba un objeto JSON")
+            return body
 
         def _json(self, data, status=HTTPStatus.OK):
             body = json.dumps(data, ensure_ascii=False).encode()
@@ -146,16 +182,45 @@ def make_handler(app: App):
 
         def _file(self, f: Path, cache: str):
             try:
-                data = f.read_bytes()
+                size = f.stat().st_size
+                fh = open(f, "rb")
             except (FileNotFoundError, IsADirectoryError, NotADirectoryError):
                 return self._error(HTTPStatus.NOT_FOUND)
-            ctype = TYPES.get(f.suffix) or mimetypes.guess_type(f.name)[0] or "application/octet-stream"
-            self.send_response(HTTPStatus.OK)
-            self.send_header("Content-Type", ctype)
-            self.send_header("Cache-Control", cache)
-            self.send_header("Content-Length", str(len(data)))
-            self.end_headers()
-            self.wfile.write(data)
+            with fh:
+                # El reproductor pide rangos para saltar dentro de la repetición.
+                start, end = 0, size - 1
+                rng = RANGE.match(self.headers.get("Range", ""))
+                if rng and (rng.group(1) or rng.group(2)):
+                    if rng.group(1):
+                        start = int(rng.group(1))
+                        if rng.group(2):
+                            end = min(int(rng.group(2)), size - 1)
+                    else:
+                        start = max(0, size - int(rng.group(2)))
+                    if start > end:
+                        self.send_response(HTTPStatus.REQUESTED_RANGE_NOT_SATISFIABLE)
+                        self.send_header("Content-Range", f"bytes */{size}")
+                        self.send_header("Content-Length", "0")
+                        self.end_headers()
+                        return
+                    self.send_response(HTTPStatus.PARTIAL_CONTENT)
+                    self.send_header("Content-Range", f"bytes {start}-{end}/{size}")
+                else:
+                    self.send_response(HTTPStatus.OK)
+                ctype = TYPES.get(f.suffix) or mimetypes.guess_type(f.name)[0] or "application/octet-stream"
+                self.send_header("Content-Type", ctype)
+                self.send_header("Cache-Control", cache)
+                self.send_header("Accept-Ranges", "bytes")
+                self.send_header("Content-Length", str(end - start + 1))
+                self.end_headers()
+                fh.seek(start)
+                left = end - start + 1
+                while left > 0:
+                    chunk = fh.read(min(left, 1 << 20))
+                    if not chunk:
+                        break
+                    self.wfile.write(chunk)
+                    left -= len(chunk)
 
         def _error(self, status):
             self.send_response(status)

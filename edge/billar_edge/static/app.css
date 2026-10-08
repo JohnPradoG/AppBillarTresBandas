@@ -136,3 +136,54 @@ button:active { transform: scale(0.97); }
 .rest-brand { margin-top: calc(40 * var(--u)); font-family: var(--cond); font-weight: 600; font-size: calc(36 * var(--u)); letter-spacing: calc(6 * var(--u)); color: var(--gold-text); }
 .rest-hint { font-size: calc(24 * var(--u)); color: var(--muted); }
 .rest-rec { font-size: calc(20 * var(--u)); color: var(--muted); letter-spacing: 1px; }
+
+/* ---- repetición ---- */
+.replay-view { position: fixed; inset: 0; z-index: 20; background: var(--bg); display: flex; flex-direction: column; }
+.replay-view[hidden] { display: none; }
+.rp-head { height: calc(96 * var(--u)); flex: none; padding: 0 calc(32 * var(--u)); display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); background: #2A1214; }
+.rp-title { display: flex; align-items: baseline; gap: calc(20 * var(--u)); min-width: 0; }
+.rp-word { font-family: var(--cond); font-weight: 700; font-size: calc(44 * var(--u)); letter-spacing: 2px; color: #FFB4B7; }
+.rp-sub { font-size: calc(22 * var(--u)); color: #D7C9CA; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rp-main { flex: 1; min-height: 0; display: flex; gap: calc(24 * var(--u)); padding: calc(24 * var(--u)); }
+.rp-left { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: calc(20 * var(--u)); }
+.rp-stage { flex: 1; min-height: 0; position: relative; border-radius: calc(16 * var(--u)); background: #050807; border: 1px solid var(--line); overflow: hidden; touch-action: none; }
+.rp-zoom { position: absolute; inset: 0; transform-origin: 0 0; will-change: transform; }
+.rp-zoom video { width: 100%; height: 100%; object-fit: contain; display: block; }
+.rp-chips { position: absolute; left: calc(24 * var(--u)); top: calc(24 * var(--u)); display: flex; gap: calc(12 * var(--u)); }
+.rp-chip { padding: calc(8 * var(--u)) calc(16 * var(--u)); border-radius: calc(8 * var(--u)); background: rgba(0,0,0,0.75); font-size: calc(22 * var(--u)); }
+.rp-chip:empty, .rp-chip[hidden] { display: none; }
+.rp-chip.muted { color: var(--muted); }
+.rp-zoom-btns { position: absolute; right: calc(24 * var(--u)); top: calc(24 * var(--u)); display: flex; flex-direction: column; gap: calc(12 * var(--u)); }
+.rp-zoom-btns button { width: calc(72 * var(--u)); height: calc(72 * var(--u)); border-radius: calc(14 * var(--u)); border: 1px solid #3A4744; background: rgba(20,28,27,0.92); display: flex; align-items: center; justify-content: center; }
+.rp-zoom-btns svg { width: calc(32 * var(--u)); height: calc(32 * var(--u)); }
+.rp-controls { border-radius: calc(16 * var(--u)); background: var(--card); border: 1px solid var(--line); padding: calc(20 * var(--u)) calc(28 * var(--u)); display: flex; flex-direction: column; gap: calc(16 * var(--u)); }
+/* La barra tiene una zona táctil más alta que lo que se ve. */
+.rp-bar { position: relative; height: calc(16 * var(--u)); border-radius: calc(8 * var(--u)); background: #26302E; margin: calc(14 * var(--u)) 0; touch-action: none; }
+.rp-bar::before { content: ""; position: absolute; left: 0; right: 0; top: calc(-22 * var(--u)); bottom: calc(-22 * var(--u)); }
+.rp-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: calc(8 * var(--u)); background: #3D6B58; }
+.rp-mark { position: absolute; top: calc(-8 * var(--u)); width: 4px; height: calc(32 * var(--u)); margin-left: -2px; background: var(--gold); }
+.rp-thumb { position: absolute; top: calc(-10 * var(--u)); width: calc(36 * var(--u)); height: calc(36 * var(--u)); margin-left: calc(-18 * var(--u)); border-radius: 50%; background: var(--text); pointer-events: none; }
+.rp-labels { position: relative; display: flex; justify-content: space-between; font-size: calc(20 * var(--u)); color: var(--muted); height: calc(26 * var(--u)); }
+.rp-moment { position: absolute; transform: translateX(-50%); color: var(--gold); font-weight: 600; white-space: nowrap; }
+.rp-row { display: flex; align-items: center; justify-content: space-between; gap: calc(16 * var(--u)); }
+.rp-steps { display: flex; gap: calc(12 * var(--u)); }
+.rp-steps button { width: calc(104 * var(--u)); height: calc(84 * var(--u)); border-radius: calc(14 * var(--u)); border: 1px solid #3A4744; background: #1B2523; font-size: calc(28 * var(--u)); font-weight: 600; }
+.rp-steps .rp-play { width: calc(120 * var(--u)); border: none; background: var(--text); color: var(--bg); display: flex; align-items: center; justify-content: center; }
+.rp-play svg { width: calc(36 * var(--u)); height: calc(36 * var(--u)); }
+.rp-play .i-play, .rp-play.paused .i-pause { display: none; }
+.rp-play.paused .i-play { display: block; }
+.rp-speeds { display: flex; gap: calc(8 * var(--u)); padding: calc(6 * var(--u)); border-radius: calc(16 * var(--u)); background: var(--bg); border: 1px solid var(--line); }
+.rp-speeds button { width: calc(104 * var(--u)); height: calc(72 * var(--u)); border-radius: calc(12 * var(--u)); border: none; background: transparent; color: #C9D0CD; font-size: calc(28 * var(--u)); font-weight: 600; }
+.rp-speeds button.on { background: var(--text); color: var(--bg); font-weight: 700; }
+.rp-side { width: calc(420 * var(--u)); flex: none; display: flex; flex-direction: column; gap: calc(16 * var(--u)); }
+.rp-card { border-radius: calc(16 * var(--u)); background: var(--card); border: 1px solid var(--line); padding: calc(24 * var(--u)); display: flex; flex-direction: column; gap: calc(10 * var(--u)); }
+.rp-card .caption { color: var(--muted); }
+.rp-time { font-size: calc(56 * var(--u)); }
+.rp-turn { font-size: calc(24 * var(--u)); }
+.rp-score { font-size: calc(24 * var(--u)); color: var(--muted); }
+.rp-spacer { flex: 1; }
+.rp-save { height: calc(112 * var(--u)); border-radius: calc(20 * var(--u)); display: flex; align-items: center; justify-content: center; font-family: var(--cond); font-weight: 700; font-size: calc(40 * var(--u)); gap: calc(14 * var(--u)); }
+.rp-save svg { width: calc(36 * var(--u)); height: calc(36 * var(--u)); }
+.rp-back { height: calc(168 * var(--u)); border-radius: calc(20 * var(--u)); border: none; background: var(--turn); color: #FFFFFF; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: calc(6 * var(--u)); }
+.rp-back-main { font-family: var(--cond); font-weight: 700; font-size: calc(48 * var(--u)); letter-spacing: 1px; }
+.rp-back-sub { font-size: calc(20 * var(--u)); color: #DDF3E7; }

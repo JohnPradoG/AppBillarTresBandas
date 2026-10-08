@@ -3,7 +3,7 @@
 Sistema para mesas de billar a tres bandas: grabación continua 24/7, pantalla con retraso, repetición instantánea, historial de 7 días, jugadas protegidas y marcador. Funciona sin Internet. Desarrollado por Vano Systems.
 
 - Arquitectura aprobada: [documento de arquitectura](https://claude.ai/code/artifact/f57a7247-8ce0-4d0f-b59c-47cdc0c712d2)
-- Estado: **Fase 2, pantalla con retraso** (Fase 1, grabación básica, incluida).
+- Estado: **Fase 3, repetición** (incluye las Fases 1 y 2).
 
 ## Qué hace la Fase 1
 
@@ -27,7 +27,15 @@ La pantalla táctil muestra la vista Mesa del mockup aprobado: un jugador a cada
 4. La imagen va exactamente N segundos detrás de la cámara (10, 20 por defecto, 30, 45 o 60, desde el menú). El retraso se mide con el reloj del equipo y se corrige solo: salta si va muy atrasada, espera si va adelantada y acelera o frena un 8 % en desviaciones pequeñas.
 5. Marcador: el jugador que toca su panel toma el turno, y cada toque reinicia el reloj para tacar (40 s). Suma con +, −, series rápidas de 2 a 5; calcula entradas, serie mayor y promedio. Por ahora se guarda en el navegador; en la Fase 6 pasa a la base de datos con jugadores y partidas.
 6. Modo reposo: tras 20 minutos sin tocar la pantalla (`idle_minutes` en `[ui]`) aparecen la hora, el nombre del billar, la mesa y la marca Vano Systems, y la tarjeta cambia de lugar cada minuto para no marcar la pantalla. La grabación sigue igual. El toque que la despierta no marca carambolas.
-7. REPETICIÓN y GUARDAR JUGADA ya están en pantalla y avisan que llegan en las Fases 3 y 5.
+7. GUARDAR JUGADA ya está en pantalla y avisa que llega en la Fase 5.
+
+## Qué hace la Fase 3
+
+1. Al pulsar REPETICIÓN, la pantalla toma el momento que estaba mostrando (hora de la pulsación menos el retraso real) y pide el clip a `POST /api/replay`.
+2. El servidor corta 30 s antes y 15 s después de los segmentos grabados, sin recomprimir, en memoria (`/run/billar/repeticiones`). Si con un retraso corto los 15 s de después aún no se han grabado, espera a que lo estén.
+3. La repetición empieza 10 s antes de la jugada, porque se pulsa después de verla. Tiene pausa, velocidades 1x, 0,5x, 0,25x y 0,1x, saltos de ±1 s y ±5 s, barra de tiempo con la marca de la jugada, zoom hasta 4x con botones, doble toque o pellizco, y desplazamiento arrastrando.
+4. Muestra la hora de la jugada, de quién era el turno y el marcador en ese momento.
+5. VOLVER A LA PARTIDA regresa a la imagen en vivo con retraso, que nunca se detuvo. Si nadie toca la pantalla durante 60 s, vuelve sola.
 
 ## Estructura
 

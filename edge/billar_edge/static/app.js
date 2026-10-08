@@ -1,5 +1,6 @@
 // Vista Mesa: video con retraso, marcador, relojes y estado de la grabación.
 import { EDGE_LAG, correction } from "./delay.js";
+import * as replay from "./replay.js";
 import * as sb from "./scoreboard.js";
 
 const $ = (id) => document.getElementById(id);
@@ -44,6 +45,7 @@ function renderStatus() {
   }
   rec.className = `rec ${ok ? "ok" : "bad"}`;
   $("rec-label").textContent = label;
+  replay.setRec(label, ok);
 }
 
 // ---------- video con retraso ----------
@@ -250,7 +252,20 @@ $("confirm-yes").addEventListener("click", () => {
   game = sb.newGame();
   update(() => {});
 });
-$("replay-btn").addEventListener("click", () => toast("La repetición llega en la próxima actualización"));
+// REPETICIÓN: el momento es la imagen que se estaba viendo (hora − retraso real).
+$("replay-btn").addEventListener("click", () => {
+  const lat = hls && Number.isFinite(hls.latency) && video.readyState >= 2 ? hls.latency + EDGE_LAG : target;
+  const turn = game.turn === null ? null : game.players[game.turn].name;
+  replay.open(Date.now() - lat * 1000, {
+    table: server ? server.table_number : "",
+    turnName: turn,
+    score: game.players.map((p) => p.score),
+    innings: sb.innings(game),
+    recLabel: $("rec-label").textContent,
+    recOk: $("rec").classList.contains("ok"),
+  });
+});
+replay.setup({ onClose: () => { lastTouchAt = Date.now(); }, toast });
 $("save-btn").addEventListener("click", () => toast("Guardar jugada llega en una próxima actualización"));
 // Sin menú contextual ni zoom con dos dedos en la pantalla táctil.
 document.addEventListener("contextmenu", (e) => e.preventDefault());
@@ -299,7 +314,7 @@ function renderRest() {
 
 function checkRest() {
   if (resting) renderRest();
-  else if (Date.now() - lastTouchAt >= idleMs()) enterRest();
+  else if (!replay.isOpen() && Date.now() - lastTouchAt >= idleMs()) enterRest();
 }
 
 // Captura: el toque que despierta la pantalla no marca carambolas ni toma el turno.
