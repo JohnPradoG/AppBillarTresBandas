@@ -58,6 +58,7 @@ def test_build_cuts_30_before_and_15_after_across_segments(cfg):
     # Empieza en el fotograma clave anterior a −30 s (clips de prueba: 1 por segundo).
     assert moment - 31_000 <= clip.start_ms <= moment - 30_000
     assert clip.moment_ms == moment
+    assert clip.fps == 10  # los clips de prueba van a 10 cuadros por segundo
 
 
 @needs_ffmpeg
@@ -87,6 +88,7 @@ def test_server_builds_and_serves_replay_with_ranges(cfg, conn, monkeypatch):
         with urllib.request.urlopen(req, timeout=30) as r:
             clip = json.loads(r.read())
         assert clip["url"].startswith("/repeticion/") and clip["moment_ms"] == T0 + 35_000
+        assert clip["fps"] == 10
         req = urllib.request.Request(base + clip["url"], headers={"Range": "bytes=0-99"})
         with urllib.request.urlopen(req, timeout=5) as r:
             assert r.status == 206 and len(r.read()) == 100

@@ -33,7 +33,7 @@ La pantalla táctil muestra la vista Mesa del mockup aprobado: un jugador a cada
 
 1. Al pulsar REPETICIÓN, la pantalla toma el momento que estaba mostrando (hora de la pulsación menos el retraso real) y pide el clip a `POST /api/replay`.
 2. El servidor corta 30 s antes y 15 s después de los segmentos grabados, sin recomprimir, en memoria (`/run/billar/repeticiones`). Si con un retraso corto los 15 s de después aún no se han grabado, espera a que lo estén.
-3. La repetición empieza 10 s antes de la jugada, porque se pulsa después de verla. Tiene pausa, velocidades 1x, 0,5x, 0,25x y 0,1x, saltos de ±1 s y ±5 s, barra de tiempo con la marca de la jugada, zoom hasta 4x con botones, doble toque o pellizco, y desplazamiento arrastrando.
+3. La repetición empieza 10 s antes de la jugada, porque se pulsa después de verla. Tiene pausa, velocidades 1x, 0,5x, 0,25x y 0,1x, avance y retroceso cuadro a cuadro (para ver si una bola toca a la otra, con la hora al milisegundo), saltos de ±1 s y ±5 s, barra de tiempo con la marca de la jugada, zoom hasta 6x con botones, doble toque o pellizco, y desplazamiento arrastrando.
 4. Muestra la hora de la jugada, de quién era el turno y el marcador en ese momento.
 5. VOLVER A LA PARTIDA regresa a la imagen en vivo con retraso, que nunca se detuvo. Si nadie toca la pantalla durante 60 s, vuelve sola.
 

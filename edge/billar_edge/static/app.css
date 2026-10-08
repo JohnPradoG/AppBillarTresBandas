@@ -166,8 +166,10 @@ button:active { transform: scale(0.97); }
 .rp-labels { position: relative; display: flex; justify-content: space-between; font-size: calc(20 * var(--u)); color: var(--muted); height: calc(26 * var(--u)); }
 .rp-moment { position: absolute; transform: translateX(-50%); color: var(--gold); font-weight: 600; white-space: nowrap; }
 .rp-row { display: flex; align-items: center; justify-content: space-between; gap: calc(16 * var(--u)); }
-.rp-steps { display: flex; gap: calc(12 * var(--u)); }
-.rp-steps button { width: calc(104 * var(--u)); height: calc(84 * var(--u)); border-radius: calc(14 * var(--u)); border: 1px solid #3A4744; background: #1B2523; font-size: calc(28 * var(--u)); font-weight: 600; }
+.rp-steps { display: flex; gap: calc(10 * var(--u)); }
+.rp-steps .rp-frame { display: flex; align-items: center; justify-content: center; border-color: var(--gold); color: var(--gold-text); }
+.rp-frame svg { width: calc(34 * var(--u)); height: calc(34 * var(--u)); }
+.rp-steps button { width: calc(92 * var(--u)); height: calc(84 * var(--u)); border-radius: calc(14 * var(--u)); border: 1px solid #3A4744; background: #1B2523; font-size: calc(28 * var(--u)); font-weight: 600; }
 .rp-steps .rp-play { width: calc(120 * var(--u)); border: none; background: var(--text); color: var(--bg); display: flex; align-items: center; justify-content: center; }
 .rp-play svg { width: calc(36 * var(--u)); height: calc(36 * var(--u)); }
 .rp-play .i-play, .rp-play.paused .i-pause { display: none; }

@@ -16,7 +16,7 @@ from pathlib import Path
 from .config import Config
 from .db import now_ms
 from .ids import uuid7
-from .media import parse_segment_start, probe_duration
+from .media import parse_segment_start, probe_duration, probe_fps
 
 BEFORE_MS = 30_000
 AFTER_MS = 15_000
@@ -37,6 +37,7 @@ class Clip:
     start_ms: int     # hora real del primer fotograma del clip
     end_ms: int
     moment_ms: int    # la jugada que se estaba viendo al pulsar
+    fps: float = 30.0
 
 
 def replays_dir(cfg: Config) -> Path:
@@ -105,7 +106,8 @@ def build(cfg: Config, camera_id: str, moment_ms: int, clock=time.time, sleep=ti
     # La copia empieza en el fotograma clave anterior al punto pedido, así que
     # el inicio real se calcula desde el final, que sí es exacto.
     real_end = min(end_ms, now_ms())
-    return Clip(clip_id, out, real_end - int(duration * 1000), real_end, moment_ms)
+    fps = probe_fps(cfg.ffprobe, out) or 30.0
+    return Clip(clip_id, out, real_end - int(duration * 1000), real_end, moment_ms, fps)
 
 
 def clip_path(cfg: Config, name: str) -> Path | None:

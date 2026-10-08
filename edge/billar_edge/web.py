@@ -90,6 +90,7 @@ class App:
             "start_ms": clip.start_ms,
             "end_ms": clip.end_ms,
             "moment_ms": clip.moment_ms,
+            "fps": clip.fps,
         }
 
     def live_file(self, camera_id: str, name: str) -> Path | None:

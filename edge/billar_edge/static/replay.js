@@ -11,7 +11,7 @@ const stage = $("rp-stage");
 export const AUTO_RETURN_MS = 60000;
 // Al abrir, empieza un poco antes de la jugada: se pulsa después de verla.
 export const LEAD_SECONDS = 10;
-const ZOOM_STEPS = [1, 1.5, 2, 3, 4];
+const ZOOM_STEPS = [1, 1.5, 2, 3, 4, 6];
 const MAX_ZOOM = ZOOM_STEPS[ZOOM_STEPS.length - 1];
 
 let clip = null;          // { url, start_ms, end_ms, moment_ms }
@@ -119,6 +119,21 @@ function step(seconds) {
   video.currentTime = Math.min(video.duration, Math.max(0, video.currentTime + seconds));
 }
 
+// Cuadro a cuadro: para ver si una bola toca a la otra.
+function frame(dir) {
+  if (!clip || !Number.isFinite(video.duration)) return;
+  video.pause();
+  const fps = clip.fps || 30;
+  const index = Math.floor(video.currentTime * fps + 0.001) + dir;
+  // A mitad del cuadro, para que el navegador muestre justo ese.
+  video.currentTime = Math.min(video.duration, Math.max(0, (index + 0.5) / fps));
+}
+
+const timeMs = (ms) => {
+  const d = new Date(ms);
+  return `${time(ms)},${String(d.getMilliseconds()).padStart(3, "0")}`;
+};
+
 function render() {
   if (!view.hidden) {
     $("rp-play").classList.toggle("paused", video.paused);
@@ -127,7 +142,10 @@ function render() {
       const p = (video.currentTime / video.duration) * 100;
       $("rp-fill").style.width = `${p}%`;
       $("rp-thumb").style.left = `${p}%`;
-      $("rp-clock").textContent = `${time(clip.start_ms + video.currentTime * 1000)} · ${rateLabel(currentRate)}`;
+      const at = clip.start_ms + video.currentTime * 1000;
+      $("rp-clock").textContent = video.paused
+        ? `${timeMs(at)} · cuadro a cuadro`
+        : `${time(at)} · ${rateLabel(currentRate)}`;
     }
     const left = Math.ceil((AUTO_RETURN_MS - (Date.now() - lastTouchAt)) / 1000);
     $("rp-back-sub").textContent = left <= 10 ? `Vuelve sola en ${Math.max(0, left)} s` : "Vuelve sola en 60 s sin tocar";
@@ -146,6 +164,8 @@ $("rp-play").addEventListener("click", () => {
 });
 document.querySelectorAll(".rp-steps [data-step]").forEach((b) =>
   b.addEventListener("click", () => step(Number(b.dataset.step))));
+document.querySelectorAll(".rp-steps [data-frame]").forEach((b) =>
+  b.addEventListener("click", () => frame(Number(b.dataset.frame))));
 document.querySelectorAll("#rp-speeds button").forEach((b) =>
   b.addEventListener("click", () => setRate(Number(b.dataset.rate))));
 $("rp-back").addEventListener("click", close);

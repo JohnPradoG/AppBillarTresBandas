@@ -119,6 +119,27 @@ def probe_duration(ffprobe: str, path: Path, timeout: float = 20) -> float | Non
     return duration if duration > 0 else None
 
 
+def probe_fps(ffprobe: str, path: Path, timeout: float = 20) -> float | None:
+    """Cuadros por segundo del video, para avanzar cuadro a cuadro en la repetición."""
+    try:
+        out = subprocess.run(
+            [ffprobe, "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=avg_frame_rate,r_frame_rate",
+             "-of", "csv=p=0", str(path)],
+            capture_output=True, text=True, timeout=timeout, check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    for value in out.stdout.strip().split(","):
+        num, _, den = value.partition("/")
+        try:
+            fps = float(num) / float(den or 1)
+        except (ValueError, ZeroDivisionError):
+            continue
+        if 1 <= fps <= 240:
+            return round(fps, 3)
+    return None
+
+
 def salvage(ffmpeg: str, path: Path, timeout: float = 60) -> bool:
     """Intenta recuperar la parte legible de un segmento dañado copiándolo de nuevo."""
     tmp = path.with_suffix(".rescate.mp4")
