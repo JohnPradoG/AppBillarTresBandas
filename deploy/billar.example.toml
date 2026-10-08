@@ -1,0 +1,27 @@
+# Configuración de la mesa. Se instala en /etc/billar/billar.toml
+# Las horas se guardan siempre en UTC; la pantalla las muestra en la hora local.
+
+[general]
+establishment_name = "Billar XYZ"
+data_dir = "/var/lib/billar"          # base de datos (disco del sistema)
+recordings_dir = "/srv/billar/video"  # video (partición o disco dedicado)
+run_dir = "/run/billar"               # estado en memoria
+retention_days = 7
+
+[storage]
+require_mount = true          # no grabar si la partición de video no está montada
+warn_free_percent = 15        # advertencia de almacenamiento
+critical_free_percent = 5     # se borran segmentos antiguos antes de tiempo
+
+[recorder]
+segment_seconds = 60          # segmentos de 1 minuto alineados al reloj
+stall_seconds = 15            # sin avance => se reinicia la grabación
+no_signal_seconds = 30        # imagen negra o congelada => SIN SEÑAL
+
+[[cameras]]
+id = "mesa1-principal"        # letras, números y guiones
+table_number = 1
+role = "principal"
+# Hikvision: /Streaming/Channels/101 · Dahua: /cam/realmonitor?channel=1&subtype=0
+# TP-Link VIGI: /stream1
+url = "rtsp://usuario:CONTRASEÑA@192.168.10.64:554/Streaming/Channels/101"
