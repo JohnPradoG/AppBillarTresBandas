@@ -4,6 +4,7 @@ import * as history from "./history.js";
 import * as jugadas from "./jugadas.js";
 import * as playersSheet from "./players.js";
 import * as replay from "./replay.js";
+import * as share from "./share.js";
 import * as restBalls from "./restballs.js";
 import * as sb from "./scoreboard.js";
 
@@ -465,7 +466,7 @@ function renderRest() {
 
 function checkRest() {
   if (resting) renderRest();
-  else if (!replay.isOpen() && !history.isOpen() && !jugadas.isOpen() && Date.now() - lastTouchAt >= idleMs()) enterRest();
+  else if (!replay.isOpen() && !history.isOpen() && !jugadas.isOpen() && !share.isOpen() && Date.now() - lastTouchAt >= idleMs()) enterRest();
 }
 
 // Captura: el toque que despierta la pantalla no marca carambolas ni toma el turno.

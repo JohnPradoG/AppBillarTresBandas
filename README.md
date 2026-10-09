@@ -48,13 +48,19 @@ La pantalla táctil muestra la vista Mesa del mockup aprobado: un jugador a cada
 - **GUARDAR JUGADA** en la partida, en la repetición y en el historial. Desde la partida guarda 30 s antes y 15 s después de lo que se ve en pantalla; desde la repetición, esa misma repetición; desde el historial, el tramo que se está viendo.
 - La jugada guardada es una copia propia en `<recordings_dir>/jugadas/AAAA-MM/`, de solo lectura y con su huella SHA-256, con el marcador, el jugador en turno y el número de partida. Dura 30 días (`protected_days`, decidido por John) y luego la limpieza diaria la borra, para que el disco se renueve solo. `billar verify-plays` revisa que ninguna falte o haya cambiado.
 - Sección **JUGADAS** (menú): cada REPETICIÓN queda en la lista mientras exista su grabación (7 días) y se puede proteger desde ahí. Filtros por fecha, hora, jugador, partida y solo protegidas; acceso directo al historial. Avisa cuando las jugadas guardadas pasan de `protected_quota_gb` (100 GB por defecto).
-- Compartir por WhatsApp y Telegram llega en la Fase 7; los nombres y las partidas, en la Fase 6.
 
 ## Qué hace la Fase 6
 
 - **Nueva partida** (menú) pide los nombres de los dos jugadores con un teclado en pantalla (con Ñ y tildes) o eligiendo entre los jugadores recientes. **Cambiar nombres** los corrige sin tocar el marcador.
 - La partida y el marcador se guardan en el equipo (`games`) después de cada toque: si se reinicia el equipo o el navegador, la partida sigue donde iba. Cada partida tiene su número por mesa.
 - Cada jugada queda ligada a su partida; en JUGADAS el filtro de partida muestra "#3 · Carlos – Ana".
+
+## Qué hace la Fase 7
+
+- **COMPARTIR** en la repetición y en cada fila de JUGADAS. Prepara un video liviano (720p, 30 cps, unos 5–14 MB) con la marca de agua: billar, mesa, fecha, jugadores y marcador arriba; VANO SYSTEMS (y el logo, con `[share] logo`) abajo.
+- **WhatsApp sin costo:** la pantalla muestra un QR. El celular conectado al WiFi del billar abre el enlace, descarga el video y lo comparte desde la galería. Lo sirve `billar share-server` (puerto 8081), un proceso aparte que solo conoce estos videos; la pantalla y su API siguen en 127.0.0.1.
+- **Telegram (opcional, gratis):** con un bot creado en @BotFather (`[share] telegram_token` y `telegram_bot`), un segundo QR abre el bot y le manda el video al cliente. Necesita Internet; lo demás no.
+- Los enlaces duran 24 horas (`link_hours`) y la limpieza borra sus videos.
 
 ## Estructura
 

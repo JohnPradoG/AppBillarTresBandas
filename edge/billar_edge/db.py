@@ -137,6 +137,22 @@ MIGRATIONS: list[str] = [
     );
     ALTER TABLE plays ADD COLUMN game_id TEXT REFERENCES games(id);
     """,
+    # 4: enlaces para compartir (Fase 7). Cada enlace es una copia liviana con
+    # marca de agua que se borra al vencer.
+    """
+    CREATE TABLE shares (
+        token TEXT PRIMARY KEY,
+        play_id TEXT NOT NULL,
+        path TEXT NOT NULL,
+        bytes INTEGER NOT NULL,
+        created_at INTEGER NOT NULL,
+        expires_at INTEGER NOT NULL,
+        downloads INTEGER NOT NULL DEFAULT 0,
+        telegram_sends INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE INDEX shares_play ON shares (play_id, expires_at);
+    CREATE INDEX shares_expires ON shares (expires_at);
+    """,
 ]
 
 

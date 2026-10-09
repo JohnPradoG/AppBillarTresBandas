@@ -19,7 +19,7 @@ billar = "billar_edge.cli:main"
 include = ["billar_edge*"]
 
 [tool.setuptools.package-data]
-billar_edge = ["static/*", "static/**/*"]
+billar_edge = ["static/*", "static/**/*", "assets/**/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

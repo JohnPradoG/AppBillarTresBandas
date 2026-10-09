@@ -2,6 +2,7 @@
 // (7 días); las protegidas con GUARDAR JUGADA se quedan siempre. Filtros por
 // fecha, hora, jugador, partida y solo protegidas.
 import * as replay from "./replay.js";
+import * as share from "./share.js";
 
 const $ = (id) => document.getElementById(id);
 const view = $("plays");
@@ -128,18 +129,22 @@ function renderRows() {
     play.innerHTML = PLAY;
     play.setAttribute("aria-label", "Ver jugada");
     play.addEventListener("click", () => watch(p));
-    const second = document.createElement("button");
-    if (p.protected) {
-      second.innerHTML = SHARE;
-      second.setAttribute("aria-label", "Compartir");
-      second.addEventListener("click", () => notify("Compartir por WhatsApp y Telegram llega en la Fase 7"));
-    } else {
-      second.className = "pl-save";
-      second.innerHTML = LOCK;
-      second.setAttribute("aria-label", "Proteger jugada");
-      second.addEventListener("click", () => protect(p, second));
+    const buttons = [play];
+    if (!p.protected) {
+      const save = document.createElement("button");
+      save.className = "pl-save";
+      save.innerHTML = LOCK;
+      save.setAttribute("aria-label", "Proteger jugada");
+      save.addEventListener("click", () => protect(p, save));
+      buttons.push(save);
     }
-    actions.append(play, second);
+    const send = document.createElement("button");
+    send.innerHTML = SHARE;
+    send.setAttribute("aria-label", "Compartir");
+    send.addEventListener("click", () => share.open({ play_id: p.id },
+      `Mesa ${p.table_number} · ${shortDay(p.moment_ms)} ${time(p.moment_ms)}`));
+    buttons.push(send);
+    actions.append(...buttons);
     const score = p.score1 !== null && p.score2 !== null ? `${p.score1} – ${p.score2}` : "—";
     row.append(
       when,

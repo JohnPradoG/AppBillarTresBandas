@@ -29,6 +29,17 @@ port = 8080
 idle_minutes = 20          # minutos sin tocar la pantalla antes del modo reposo
 # brand_contact = "WhatsApp 300 000 0000"  # contacto de Vano Systems en el modo reposo
 
+[share]
+# Compartir jugadas. El celular del cliente, conectado al WiFi del billar,
+# escanea el QR de la pantalla y descarga el video para mandarlo por WhatsApp.
+port = 8081                # solo sirve los videos compartidos (abrir en el firewall de la red local)
+# address = "192.168.1.50" # IP del equipo en el WiFi; vacío = se detecta sola
+link_hours = 24            # cuánto dura cada enlace
+# logo = "/etc/billar/logo-vano.png"   # logo para la marca de agua (PNG con transparencia)
+# Telegram (opcional, gratis): crear un bot con @BotFather y poner aquí su token y nombre.
+# telegram_token = "123456:ABC..."
+# telegram_bot = "BillarXYZBot"
+
 [[cameras]]
 id = "mesa1-principal"        # letras, números y guiones
 table_number = 1

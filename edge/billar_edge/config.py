@@ -53,6 +53,14 @@ class Config:
     idle_minutes: int = 20
     # Contacto de Vano Systems que se muestra en el modo reposo (vacío = no se muestra).
     brand_contact: str = ""
+    # Compartir (Fase 7): enlaces para el celular en la red del billar y bot
+    # de Telegram opcional.
+    share_port: int = 8081
+    share_address: str = ""          # IP o nombre del equipo en el WiFi; vacío = se detecta
+    share_hours: int = 24            # lo que dura un enlace
+    share_logo: Path | None = None   # PNG con el logo de Vano Systems para la marca de agua
+    telegram_token: str = ""
+    telegram_bot: str = ""           # nombre del bot, sin @
     cameras: tuple[CameraConfig, ...] = field(default_factory=tuple)
 
     @property
@@ -72,6 +80,10 @@ class Config:
         return self.run_dir / camera_id
 
     @property
+    def shares_dir(self) -> Path:
+        return self.recordings_dir / "compartir"
+
+    @property
     def plays_dir(self) -> Path:
         return self.protected_dir or self.recordings_dir / "jugadas"
 
@@ -87,6 +99,7 @@ def load(path: str | os.PathLike | None = None) -> Config:
     storage = raw.get("storage", {})
     recorder = raw.get("recorder", {})
     ui = raw.get("ui", {})
+    share = raw.get("share", {})
     cameras = tuple(
         CameraConfig(
             id=c["id"],
@@ -101,8 +114,8 @@ def load(path: str | os.PathLike | None = None) -> Config:
         raise ValueError("La configuración no tiene ninguna cámara ([[cameras]]).")
     if len({c.id for c in cameras}) != len(cameras):
         raise ValueError("Hay cámaras con el mismo id.")
-    if any(c.id == "jugadas" for c in cameras):
-        raise ValueError("Una cámara no puede llamarse 'jugadas': es la carpeta de las jugadas guardadas.")
+    if any(c.id in ("jugadas", "compartir") for c in cameras):
+        raise ValueError("Una cámara no puede llamarse 'jugadas' ni 'compartir': son carpetas del sistema.")
     return Config(
         data_dir=Path(general.get("data_dir", "/var/lib/billar")),
         recordings_dir=Path(general.get("recordings_dir", "/srv/billar/video")),
@@ -124,5 +137,11 @@ def load(path: str | os.PathLike | None = None) -> Config:
         ui_port=int(ui.get("port", 8080)),
         idle_minutes=int(ui.get("idle_minutes", 20)),
         brand_contact=str(ui.get("brand_contact", "")),
+        share_port=int(share.get("port", 8081)),
+        share_address=str(share.get("address", "")),
+        share_hours=int(share.get("link_hours", 24)),
+        share_logo=Path(share["logo"]) if share.get("logo") else None,
+        telegram_token=str(share.get("telegram_token", "")),
+        telegram_bot=str(share.get("telegram_bot", "")).lstrip("@"),
         cameras=cameras,
     )

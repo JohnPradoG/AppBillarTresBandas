@@ -273,6 +273,7 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>
         <span>GUARDAR JUGADA</span>
       </button>
+      <button class="rp-share" id="rp-share"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"></line><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"></line></svg><span>COMPARTIR</span></button>
       <button class="rp-back" id="rp-back">
         <span class="rp-back-main" id="rp-back-main">VOLVER A LA PARTIDA</span>
         <span class="rp-back-sub" id="rp-back-sub">Vuelve sola en 60 s sin tocar</span>
@@ -280,6 +281,41 @@
     </aside>
   </div>
 </section>
+
+<div class="sheet share-sheet" id="share" hidden>
+  <div class="sheet-card share-card" role="dialog" aria-modal="true" aria-labelledby="sh-title">
+    <div class="sh-head">
+      <h2 id="sh-title">Compartir jugada</h2>
+      <span class="rp-sub" id="sh-sub"></span>
+    </div>
+    <div class="sh-wait" id="sh-wait"><span class="spinner"></span><span id="sh-wait-text"></span></div>
+    <div id="sh-ready" hidden>
+      <div class="sh-cards">
+        <div class="sh-card">
+          <h3>WhatsApp o guardar en el celular</h3>
+          <div class="sh-qr" id="sh-qr-web"></div>
+          <ol>
+            <li>Conéctate al <b>WiFi del billar</b>.</li>
+            <li>Escanea el código con la cámara.</li>
+            <li>Toca <b>Descargar video</b> y compártelo por WhatsApp.</li>
+          </ol>
+          <span class="sh-url" id="sh-url"></span>
+        </div>
+        <div class="sh-card" id="sh-card-tg">
+          <h3>Telegram</h3>
+          <div class="sh-qr" id="sh-qr-tg"></div>
+          <ol>
+            <li>Escanea el código con la cámara.</li>
+            <li>Toca <b>Iniciar</b> en Telegram.</li>
+            <li>El video te llega al chat.</li>
+          </ol>
+        </div>
+      </div>
+      <p class="hint" id="sh-foot"></p>
+    </div>
+    <button class="wide close" id="sh-close">Cerrar</button>
+  </div>
+</div>
 
 <div class="toast" id="toast" hidden></div>
 

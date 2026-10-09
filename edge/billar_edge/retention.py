@@ -13,7 +13,7 @@ import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
 
-from . import events, plays
+from . import events, plays, share
 from .config import Config
 from .db import now_ms
 
@@ -56,6 +56,7 @@ def run(conn: sqlite3.Connection, cfg: Config, now: int | None = None, free_pct=
     for row in expired:
         result.freed_bytes += _delete(conn, row)
         result.deleted_expired += 1
+    share.cleanup(conn, cfg, now)
     count, freed = plays.expire(conn, cfg, now)
     if count:
         events.record(conn, "info", events.RETENTION,

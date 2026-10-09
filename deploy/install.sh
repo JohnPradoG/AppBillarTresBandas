@@ -62,6 +62,8 @@ install -m 0644 "$REPO_DIR"/deploy/systemd/billar-recorder@.service /etc/systemd
 install -m 0644 "$REPO_DIR"/deploy/systemd/billar-health.service /etc/systemd/system/
 install -m 0644 "$REPO_DIR"/deploy/systemd/billar-live@.service /etc/systemd/system/
 install -m 0644 "$REPO_DIR"/deploy/systemd/billar-ui.service /etc/systemd/system/
+install -m 0644 "$REPO_DIR"/deploy/systemd/billar-share.service /etc/systemd/system/
+install -m 0644 "$REPO_DIR"/deploy/systemd/billar-telegram.service /etc/systemd/system/
 install -m 0644 "$REPO_DIR"/deploy/systemd/billar-kiosk.service /etc/systemd/system/
 install -m 0644 "$REPO_DIR"/deploy/systemd/billar-retention.service /etc/systemd/system/
 install -m 0644 "$REPO_DIR"/deploy/systemd/billar-retention.timer /etc/systemd/system/
@@ -78,6 +80,8 @@ systemctl daemon-reexec   # aplica el watchdog de hardware
 systemctl enable --now billar-health.service billar-retention.timer
 systemctl enable billar-ui.service
 systemctl restart billar-ui.service
+systemctl enable billar-share.service billar-telegram.service
+systemctl restart billar-share.service billar-telegram.service
 for cam in $(sudo -u billar BILLAR_CONFIG="$CONFIG" "$PREFIX/venv/bin/billar" cameras); do
   systemctl enable "billar-recorder@${cam}.service" "billar-live@${cam}.service"
   systemctl restart "billar-recorder@${cam}.service" "billar-live@${cam}.service"

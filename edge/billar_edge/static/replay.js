@@ -2,6 +2,8 @@
 // del momento que se estaba viendo y lo muestra con cámara lenta, saltos, zoom
 // y desplazamiento. Vuelve sola a la partida tras 60 s sin tocar.
 
+import * as share from "./share.js";
+
 const $ = (id) => document.getElementById(id);
 const view = $("replay");
 const video = $("rp-video");
@@ -241,6 +243,8 @@ function render() {
         ? `${timeMs(at)} · cuadro a cuadro`
         : `${time(at)} · ${rateLabel(currentRate)}`;
     }
+    // Mientras se muestra el QR para compartir no vuelve a la partida.
+    if (share.isOpen()) lastTouchAt = Date.now();
     const limit = mode.autoReturnMs || AUTO_RETURN_MS;
     const left = Math.ceil((limit - (Date.now() - lastTouchAt)) / 1000);
     $("rp-back-sub").textContent = left <= 10
@@ -269,6 +273,11 @@ $("rp-back").addEventListener("click", () => close(!mode.onBack));
 $("rp-prev").addEventListener("click", () => mode.nav && mode.nav.prev());
 $("rp-next").addEventListener("click", () => mode.nav && mode.nav.next());
 $("rp-save").addEventListener("click", save);
+$("rp-share").addEventListener("click", () => {
+  if (!clip) { notify("Espera a que cargue la grabación"); return; }
+  video.pause();
+  share.open(saveBody(), $("rp-sub").textContent);
+});
 view.addEventListener("pointerdown", () => { lastTouchAt = Date.now(); }, true);
 
 // Barra de tiempo: tocar o arrastrar para ir a ese momento.

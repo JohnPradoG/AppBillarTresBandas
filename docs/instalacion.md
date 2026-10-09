@@ -57,6 +57,8 @@ systemctl status billar-live@<camara> billar-ui billar-kiosk
 billar --config /etc/billar/billar.toml verify-plays  # jugadas guardadas completas
 ```
 
+Compartir: el equipo debe estar conectado a la misma red WiFi o cableada que usan los clientes, y esa red debe permitir que los celulares vean al equipo en el puerto 8081 (algunos routers aíslan a los clientes del WiFi de invitados: en ese caso desactivar el aislamiento o usar Telegram). Conviene reservar en el router una IP fija para el mini PC, o fijarla en `[share] address`.
+
 Las jugadas guardadas están en `/srv/billar/video/jugadas/` (una carpeta por mes). Duran 30 días (`protected_days`) y luego se borran solas como el resto; para conservar alguna más tiempo basta copiarla fuera de esa carpeta.
 
 Prueba de corte de luz: desenchufar el equipo, volver a enchufarlo y comprobar sin tocar nada que vuelve a GRABANDO, que la pantalla vuelve sola a la vista Mesa y que `events` muestra "apagado inesperado" y "Grabación iniciada automáticamente".

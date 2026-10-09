@@ -8,7 +8,7 @@ import sys
 from datetime import datetime
 
 from . import config as config_mod
-from . import events, health, live, plays, recorder, retention, statefile, web
+from . import events, health, live, plays, recorder, retention, share, statefile, telegram, web
 from .db import connect
 
 
@@ -27,6 +27,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("camera_id")
     sub.add_parser("ui", help="servidor local de la pantalla táctil (servicio)")
     sub.add_parser("health", help="monitor de salud (servicio)")
+    sub.add_parser("share-server", help="enlaces para compartir jugadas en la red del billar (servicio)")
+    sub.add_parser("telegram", help="bot de Telegram para compartir jugadas (servicio, opcional)")
     sub.add_parser("retention", help="borra los segmentos vencidos (lo ejecuta un temporizador)")
     sub.add_parser("status", help="muestra el estado actual")
     p = sub.add_parser("events", help="muestra el registro de eventos")
@@ -51,6 +53,10 @@ def main(argv: list[str] | None = None) -> int:
         web.main(cfg)
     elif args.command == "health":
         health.main(cfg)
+    elif args.command == "share-server":
+        share.main(cfg)
+    elif args.command == "telegram":
+        return telegram.main(cfg)
     elif args.command == "retention":
         conn = connect(cfg.db_path)
         result = retention.run(conn, cfg)

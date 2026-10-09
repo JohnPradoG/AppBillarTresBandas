@@ -19,7 +19,7 @@ from pathlib import Path
 from datetime import date
 from urllib.parse import parse_qs, urlparse
 
-from . import __version__, games, history, plays, replay, settings, statefile
+from . import __version__, games, history, plays, replay, settings, share, statefile
 from .config import Config
 from .db import connect, ensure_camera, now_ms
 from .health import STALE_STATE_SECONDS
@@ -49,6 +49,7 @@ class App:
         # Un guardado a la vez: dos toques seguidos no hacen dos copias.
         self.save_lock = threading.Lock()
         self.game_lock = threading.Lock()
+        self.share_lock = threading.Lock()
 
     def state(self) -> dict:
         conn = connect(self.cfg.db_path)
@@ -186,6 +187,26 @@ class App:
             "protected_days": self.cfg.protected_days,
         }
 
+    def share_play(self, body: dict) -> dict:
+        """COMPARTIR: video liviano con marca de agua y sus enlaces. Con play_id
+        es una jugada de la lista o de la REPETICIÓN; sin él (historial) se
+        anota primero el tramo que se está viendo."""
+        cam = self.cfg.cameras[0]
+        clip_file = replay.clip_path(self.cfg, body["clip"]) if body.get("clip") else None
+        conn = connect(self.cfg.db_path)
+        try:
+            play_id = body.get("play_id")
+            if not play_id:
+                start_ms, end_ms = int(body["start_ms"]), int(body["end_ms"])
+                if not 0 < end_ms - start_ms <= replay.MAX_RANGE_MS:
+                    raise ValueError("El tramo a compartir no es válido.")
+                play_id = plays.record(conn, self.cfg, cam.id, int(body["moment_ms"]), start_ms, end_ms,
+                                       "historial", body.get("meta"))
+            with self.share_lock:
+                return share.create(conn, self.cfg, str(play_id), clip_file)
+        finally:
+            conn.close()
+
     # ---------- partida ----------
 
     def _game(self, fn):
@@ -296,6 +317,8 @@ def make_handler(app: App):
             path = urlparse(self.path).path
             if path == "/api/plays":
                 return self._save_play()
+            if path == "/api/share":
+                return self._share()
             if path == "/api/game":
                 return self._game_call(app.new_game)
             if path != "/api/replay":
@@ -328,6 +351,20 @@ def make_handler(app: App):
                 return self._json({"error": str(e)}, HTTPStatus.NOT_FOUND)
             except (ValueError, KeyError, TypeError, AttributeError) as e:
                 return self._json({"error": str(e)}, HTTPStatus.BAD_REQUEST)
+
+        def _share(self):
+            try:
+                out = app.share_play(self._body())
+            except (ValueError, KeyError, TypeError) as e:
+                return self._json({"error": str(e)}, HTTPStatus.BAD_REQUEST)
+            except (share.ShareError, plays.PlayError) as e:
+                return self._json({"error": str(e)}, HTTPStatus.CONFLICT)
+            except OSError as e:
+                log.exception("No se pudo preparar el video para compartir")
+                return self._json({"error": f"No se pudo escribir el video ({e.strerror})."},
+                                  HTTPStatus.INTERNAL_SERVER_ERROR)
+            log.info("Jugada lista para compartir (%s KB)", out["bytes"] // 1024)
+            return self._json(out)
 
         def _save_play(self):
             try:
