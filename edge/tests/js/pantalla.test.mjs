@@ -53,3 +53,9 @@ test("cada partida nueva lleva su número, que queda con las jugadas guardadas",
   assert.equal(sb.newGame().number, 1);
   assert.equal(sb.newGame(4).number, 4);
 });
+
+test("el tiempo para tacar se puede cambiar desde administración", () => {
+  const g = sb.touch(sb.newGame(), 0, 1000);
+  assert.equal(sb.shotRemaining(sb.newGame(), 0, 50), 50);
+  assert.equal(sb.shotRemaining(g, 21000, 30), 10);
+});

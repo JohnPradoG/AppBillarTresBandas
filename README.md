@@ -3,7 +3,7 @@
 Sistema para mesas de billar a tres bandas: grabación continua 24/7, pantalla con retraso, repetición instantánea, historial de 7 días, jugadas protegidas y marcador. Funciona sin Internet. Desarrollado por Vano Systems.
 
 - Arquitectura aprobada: [documento de arquitectura](https://claude.ai/code/artifact/f57a7247-8ce0-4d0f-b59c-47cdc0c712d2)
-- Estado: **Fase 4, historial** (incluye las Fases 1 a 3).
+- Estado: **Fase 8 (parte 1), administración** (incluye las Fases 1 a 7).
 
 ## Qué hace la Fase 1
 
@@ -61,6 +61,18 @@ La pantalla táctil muestra la vista Mesa del mockup aprobado: un jugador a cada
 - **WhatsApp sin costo:** la pantalla muestra un QR. El celular conectado al WiFi del billar abre el enlace, descarga el video y lo comparte desde la galería. Lo sirve `billar share-server` (puerto 8081), un proceso aparte que solo conoce estos videos; la pantalla y su API siguen en 127.0.0.1.
 - **Telegram (opcional, gratis):** con un bot creado en @BotFather (`[share] telegram_token` y `telegram_bot`), un segundo QR abre el bot y le manda el video al cliente. Necesita Internet; lo demás no.
 - Los enlaces duran 24 horas (`link_hours`) y la limpieza borra sus videos.
+
+## Qué hace la Fase 8 (parte 1)
+
+- **ADMINISTRACIÓN** en el menú, con PIN. Los jugadores siguen sin PIN para el marcador, REPETICIÓN, GUARDAR, COMPARTIR, Nueva partida y el retraso.
+- **Primer uso:** la primera vez pide crear el PIN del administrador. Cada usuario entra con su propio PIN (4 a 8 números, distinto entre usuarios), guardado con PBKDF2-SHA256. Tras 5 PIN malos la pantalla se bloquea 5 minutos y se avisa al dueño. La sesión se cierra sola a los 5 minutos sin tocar.
+- **Roles:** administrador (todo), encargado (estado, ajustes y registro), operador (solo estado). Siempre queda al menos un administrador activo.
+- **Estado:** grabación, disco, desde cuándo hay historial, jugadas protegidas y últimos avisos.
+- **Ajustes:** nombre del billar (teclado en pantalla), minutos para el modo reposo, tiempo para tacar (30–60 s) y retraso. Lo elegido aquí manda sobre `billar.toml`.
+- **Quitar protección** de una jugada guardada: solo administrador, con motivo, borra la copia.
+- **Registro:** todo lo que se hace en administración, con hora y nombre; no se borra desde la pantalla.
+- **Alertas por Telegram (gratis):** con el bot del billar, un QR vincula el celular del dueño. Llegan advertencias y errores (cámara, señal, disco, apagones, PIN bloqueado) y cuando todo vuelve a la normalidad.
+- Parte 2 (pendiente): panel por la red del billar con HTTPS, acceso remoto por VPN y actualizaciones con vuelta atrás.
 
 ## Estructura
 

@@ -60,9 +60,10 @@ export function average(player) {
   return player.innings ? player.score / player.innings : 0;
 }
 
-export function shotRemaining(game, now) {
-  if (game.shotStartedAt === null) return SHOT_SECONDS;
-  return Math.max(0, SHOT_SECONDS - Math.floor((now - game.shotStartedAt) / 1000));
+// seconds: tiempo para tacar elegido en ADMINISTRACIÓN (40 por defecto).
+export function shotRemaining(game, now, seconds = SHOT_SECONDS) {
+  if (game.shotStartedAt === null) return seconds;
+  return Math.max(0, seconds - Math.floor((now - game.shotStartedAt) / 1000));
 }
 
 export function elapsedSeconds(game, now) {

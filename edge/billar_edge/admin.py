@@ -25,6 +25,9 @@ from .health import STALE_STATE_SECONDS
 
 UNPROTECT_REASONS = ("Pedido del cliente", "Jugada equivocada", "Liberar espacio", "Otro motivo")
 ALERT_LINK_MS = 15 * 60_000
+SETTING_LABELS = {"establishment_name": "nombre del billar", "idle_minutes": "minutos para el reposo",
+                  "shot_seconds": "segundos para tacar", "delay_seconds": "retraso de la pantalla"}
+USER_LABELS = {"name": "nombre", "role": "rol", "pin": "PIN", "active": "activo"}
 
 # Qué se manda al dueño por Telegram: problemas y su solución.
 ALERT_TYPES_OK = (events.CAMERA_CONNECTED, events.SIGNAL_OK, events.STORAGE_OK)
@@ -58,7 +61,15 @@ class AdminApi:
         if method == "POST" and parts == ["primer-uso"]:
             return self.first_admin(conn, body)
         if method == "POST" and parts == ["login"]:
-            tok, user = self.sessions.login(conn, body.get("pin"))
+            try:
+                tok, user = self.sessions.login(conn, body.get("pin"))
+            except auth.Denied as e:
+                if "bloqueada" in str(e):
+                    # Llega también al dueño por Telegram, como las demás advertencias.
+                    events.record(conn, "advertencia", events.PIN_LOCKED,
+                                  "Pusieron 5 veces un PIN incorrecto en ADMINISTRACIÓN: bloqueada 5 minutos.")
+                    auth.audit(conn, None, "pin_bloqueado", "5 PIN incorrectos seguidos: bloqueo de 5 minutos")
+                raise
             auth.audit(conn, user, "inicio_sesion", f"{user['name']} entró a la administración")
             return {"token": tok, "user": user}
         if method == "POST" and parts == ["logout"]:
@@ -70,7 +81,7 @@ class AdminApi:
             user = self.sessions.user(token, "ajustes")
             done = settings.update_display(conn, body, user["name"])
             if done:
-                auth.audit(conn, user, "ajustes", "Cambió " + ", ".join(f"{k} = {v}" for k, v in done.items()), done)
+                auth.audit(conn, user, "ajustes", "Cambió " + ", ".join(f"{SETTING_LABELS[k]}: {v}" for k, v in done.items()), done)
             return {"changed": done, "settings": self._settings(conn)}
         if parts[:1] == ["usuarios"]:
             user = self.sessions.user(token, "usuarios")
@@ -82,7 +93,7 @@ class AdminApi:
                 changes = {k: body[k] for k in ("name", "role", "pin", "active") if k in body}
                 row = auth.update_user(conn, parts[1], changes)
                 self.sessions.drop_user(row["id"]) if row["id"] != user["id"] else None
-                what = ", ".join("PIN" if k == "pin" else k for k in changes)
+                what = ", ".join(USER_LABELS[k] for k in changes)
                 auth.audit(conn, user, "usuario_modificado", f"Modificó a {row['name']} ({what})")
                 return {"user": auth.public_user(row), "users": self._users(conn)}
         if method == "POST" and len(parts) == 3 and parts[0] == "jugadas" and parts[2] == "desproteger":
@@ -100,7 +111,7 @@ class AdminApi:
             user = self.sessions.user(token, "alertas")
             if not (self.cfg.telegram_token and self.cfg.telegram_bot):
                 raise ValueError("Primero hay que configurar el bot de Telegram del billar.")
-            code = secrets.token_urlsafe(9)
+            code = secrets.token_hex(6)
             settings.set_system(conn, settings.ALERT_CODE, f"{code}|{now_ms() + ALERT_LINK_MS}", user["name"])
             return {"url": f"https://t.me/{self.cfg.telegram_bot}?start=alertas_{code}"}
         raise LookupError("Ruta de administración desconocida.")

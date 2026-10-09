@@ -30,6 +30,7 @@ RETENTION = "limpieza"
 SYSTEM_START = "sistema_iniciado"
 UNCLEAN_SHUTDOWN = "apagado_inesperado"
 CLOCK_JUMP = "hora_desajustada"
+PIN_LOCKED = "pin_bloqueado"
 
 _LEVELS = {"info": logging.INFO, "advertencia": logging.WARNING, "error": logging.ERROR}
 

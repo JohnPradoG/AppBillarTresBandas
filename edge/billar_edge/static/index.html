@@ -109,6 +109,7 @@
       <button class="wide" id="new-game">Nueva partida</button>
       <button class="wide" id="rename-players">Cambiar nombres</button>
     </div>
+    <button class="wide admin-btn" id="open-admin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg><span>Administración (con PIN)</span></button>
     <button class="wide close" id="menu-close">Cerrar</button>
   </div>
 </div>
@@ -314,6 +315,67 @@
       <p class="hint" id="sh-foot"></p>
     </div>
     <button class="wide close" id="sh-close">Cerrar</button>
+  </div>
+</div>
+
+<section class="admin-view" id="admin" hidden aria-label="Administración">
+  <header class="hs-head ad-head">
+    <div class="rp-title">
+      <span class="ad-word">ADMINISTRACIÓN</span>
+      <span class="rp-sub" id="ad-sub"></span>
+    </div>
+    <div class="pl-right">
+      <span class="ad-user" id="ad-user"></span>
+      <button class="hs-close ad-exit" id="ad-exit">SALIR</button>
+    </div>
+  </header>
+  <div class="ad-main">
+    <nav class="ad-tabs" id="ad-tabs">
+      <button data-tab="estado">Estado</button>
+      <button data-tab="ajustes" data-perm="ajustes">Ajustes</button>
+      <button data-tab="jugadas" data-perm="desproteger">Jugadas protegidas</button>
+      <button data-tab="usuarios" data-perm="usuarios">Usuarios</button>
+      <button data-tab="registro" data-perm="auditoria">Registro</button>
+      <button data-tab="alertas" data-perm="alertas">Alertas</button>
+      <span class="ad-tabs-gap"></span>
+      <span class="ad-note">Se cierra sola a los 5 minutos sin tocar.</span>
+    </nav>
+    <div class="ad-body" id="ad-body"></div>
+  </div>
+</section>
+
+<div class="sheet pin-sheet" id="pin" hidden>
+  <div class="sheet-card pin-card" role="dialog" aria-modal="true" aria-labelledby="pin-title">
+    <h2 id="pin-title">Administración</h2>
+    <p class="hint" id="pin-hint"></p>
+    <div class="pin-dots" id="pin-dots"></div>
+    <p class="pin-error" id="pin-error"></p>
+    <div class="pin-pad" id="pin-pad"></div>
+    <button class="wide close" id="pin-cancel">Cancelar</button>
+  </div>
+</div>
+
+<div class="sheet ad-sheet" id="ad-text" hidden>
+  <div class="sheet-card players-card" role="dialog" aria-modal="true" aria-labelledby="ad-text-title">
+    <h2 id="ad-text-title"></h2>
+    <div class="ad-text-value" id="ad-text-value"></div>
+    <div class="keyboard" id="ad-keyboard"></div>
+    <div class="confirm-row">
+      <button class="wide" id="ad-text-cancel">Cancelar</button>
+      <button class="wide go" id="ad-text-ok">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="sheet ad-sheet" id="ad-dialog" hidden>
+  <div class="sheet-card ad-dialog-card" role="dialog" aria-modal="true" aria-labelledby="ad-dialog-title">
+    <h2 id="ad-dialog-title"></h2>
+    <p class="hint" id="ad-dialog-hint"></p>
+    <div class="ad-dialog-body" id="ad-dialog-body"></div>
+    <div class="confirm-row" id="ad-dialog-actions">
+      <button class="wide" id="ad-dialog-cancel">Cancelar</button>
+      <button class="wide go" id="ad-dialog-ok">Guardar</button>
+    </div>
   </div>
 </div>
 

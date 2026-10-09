@@ -1,5 +1,6 @@
 // Vista Mesa: video con retraso, marcador, relojes y estado de la grabación.
 import { EDGE_LAG, correction } from "./delay.js";
+import * as admin from "./admin.js";
 import * as history from "./history.js";
 import * as jugadas from "./jugadas.js";
 import * as playersSheet from "./players.js";
@@ -253,7 +254,7 @@ function renderClocks() {
   const now = Date.now();
   const s = sb.elapsedSeconds(game, now);
   $("game-time").textContent = `${pad(Math.floor(s / 3600))}:${pad(Math.floor(s / 60) % 60)}:${pad(s % 60)}`;
-  const left = sb.shotRemaining(game, now);
+  const left = sb.shotRemaining(game, now, server && server.shot_seconds ? server.shot_seconds : sb.SHOT_SECONDS);
   $("shot-time").textContent = left;
   const shot = $("shot");
   shot.classList.toggle("warn", game.turn !== null && left <= 10);
@@ -392,6 +393,8 @@ function openHistory() {
 jugadas.setup({ toast, openHistory });
 $("open-history").addEventListener("click", () => { $("menu").hidden = true; openHistory(); });
 $("open-plays").addEventListener("click", () => { $("menu").hidden = true; jugadas.open(tableInfo()); });
+$("open-admin").addEventListener("click", () => { $("menu").hidden = true; admin.open(); });
+admin.setup({ toast, onChanged: refreshState });
 
 // GUARDAR JUGADA desde la partida: protege 30 s antes y 15 s después de lo
 // que se ve en pantalla, con el marcador de ese momento.
@@ -466,7 +469,7 @@ function renderRest() {
 
 function checkRest() {
   if (resting) renderRest();
-  else if (!replay.isOpen() && !history.isOpen() && !jugadas.isOpen() && !share.isOpen() && Date.now() - lastTouchAt >= idleMs()) enterRest();
+  else if (!replay.isOpen() && !history.isOpen() && !jugadas.isOpen() && !share.isOpen() && !admin.isOpen() && Date.now() - lastTouchAt >= idleMs()) enterRest();
 }
 
 // Captura: el toque que despierta la pantalla no marca carambolas ni toma el turno.

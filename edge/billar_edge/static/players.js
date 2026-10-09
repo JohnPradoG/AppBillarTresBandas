@@ -1,9 +1,9 @@
 // Nombres de los jugadores: hoja con los dos jugadores, los recientes y un
 // teclado en pantalla (la pantalla táctil no tiene teclado físico).
+import * as keyboard from "./keyboard.js";
 
 const $ = (id) => document.getElementById(id);
 const sheet = $("players");
-const ROWS = ["1234567890", "QWERTYUIOP", "ASDFGHJKLÑ", "ZXCVBNMÁÉÍÓÚ"];
 const MAX = 24;
 const DEFAULTS = ["Jugador 1", "Jugador 2"];
 
@@ -69,9 +69,7 @@ function type(ch) {
   let v = fresh[active] ? "" : names[active];
   fresh[active] = false;
   if (v.length >= MAX) return;
-  // Mayúscula al empezar cada palabra.
-  v += v === "" || v.endsWith(" ") ? ch : ch.toLowerCase();
-  names[active] = v;
+  names[active] = keyboard.append(v, ch);
   render();
 }
 
@@ -88,32 +86,7 @@ function key(action) {
   render();
 }
 
-function buildKeyboard() {
-  const kb = $("pl-keyboard");
-  ROWS.forEach((row) => {
-    const r = document.createElement("div");
-    r.className = "kb-row";
-    for (const ch of row) {
-      const b = document.createElement("button");
-      b.textContent = ch;
-      b.addEventListener("click", () => type(ch));
-      r.append(b);
-    }
-    kb.append(r);
-  });
-  const last = document.createElement("div");
-  last.className = "kb-row";
-  for (const [action, label, cls] of [["clear", "Borrar todo", "kb-wide"], ["space", "Espacio", "kb-space"], ["back", "⌫ Borrar", "kb-wide"]]) {
-    const b = document.createElement("button");
-    b.textContent = label;
-    b.className = cls;
-    b.addEventListener("click", () => key(action));
-    last.append(b);
-  }
-  kb.append(last);
-}
-
-buildKeyboard();
+keyboard.build($("pl-keyboard"), type, key);
 [0, 1].forEach((i) => $(`pl-slot-${i}`).addEventListener("click", () => { fresh[i] = true; select(i); }));
 $("pl-sheet-cancel").addEventListener("click", close);
 $("pl-sheet-ok").addEventListener("click", () => {
