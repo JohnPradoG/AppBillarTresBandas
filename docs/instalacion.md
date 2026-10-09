@@ -8,7 +8,7 @@
 
 ## 2. Ubuntu Server 24.04 LTS
 
-Instalación mínima, sin escritorio. Particiones recomendadas en el SSD de 1 TB:
+Instalación mínima, sin escritorio. Particiones recomendadas en el SSD de 2 TB (60 fps a 8 Mbps ocupan unos 600 GB por semana, más las jugadas protegidas):
 
 | Partición | Tamaño | Montaje | Uso |
 | --- | --- | --- | --- |
