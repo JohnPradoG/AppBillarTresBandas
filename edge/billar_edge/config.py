@@ -49,6 +49,8 @@ class Config:
     ui_port: int = 8080
     # Minutos sin tocar la pantalla antes del modo reposo (la grabación sigue).
     idle_minutes: int = 20
+    # Contacto de Vano Systems que se muestra en el modo reposo (vacío = no se muestra).
+    brand_contact: str = ""
     cameras: tuple[CameraConfig, ...] = field(default_factory=tuple)
 
     @property
@@ -118,5 +120,6 @@ def load(path: str | os.PathLike | None = None) -> Config:
         ui_host=ui.get("host", "127.0.0.1"),
         ui_port=int(ui.get("port", 8080)),
         idle_minutes=int(ui.get("idle_minutes", 20)),
+        brand_contact=str(ui.get("brand_contact", "")),
         cameras=cameras,
     )

@@ -3,6 +3,7 @@ import { EDGE_LAG, correction } from "./delay.js";
 import * as history from "./history.js";
 import * as jugadas from "./jugadas.js";
 import * as replay from "./replay.js";
+import * as restBalls from "./restballs.js";
 import * as sb from "./scoreboard.js";
 
 const $ = (id) => document.getElementById(id);
@@ -346,11 +347,13 @@ function enterRest() {
   $("confirm").hidden = true;
   restMovedAt = 0;
   renderRest();
+  restBalls.start($("rest-balls"));
 }
 
 function leaveRest() {
   resting = false;
   $("rest").hidden = true;
+  restBalls.stop();
 }
 
 function renderRest() {
@@ -358,13 +361,16 @@ function renderRest() {
   $("rest-time").textContent = now.toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
   $("rest-place").textContent = server ? server.establishment : "";
   $("rest-table").textContent = server ? `Mesa ${server.table_number}` : "";
+  const contact = server && server.brand_contact;
+  $("rest-contact").hidden = !contact;
+  $("rest-contact").textContent = contact ? `¿Lo quieres en tu billar? ${contact}` : "";
   // La grabación no se detiene en reposo; se indica para tranquilidad del dueño.
   $("rest-rec").textContent = $("rec-label").textContent;
   if (Date.now() - restMovedAt >= 60000) {
     restMovedAt = Date.now();
     const card = $("rest-card");
-    card.style.left = `${30 + Math.random() * 40}%`;
-    card.style.top = `${35 + Math.random() * 30}%`;
+    card.style.left = `${42 + Math.random() * 16}%`;
+    card.style.top = `${44 + Math.random() * 12}%`;
   }
 }
 

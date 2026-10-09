@@ -26,6 +26,7 @@ no_signal_seconds = 30        # imagen negra o congelada => SIN SEÑAL
 host = "127.0.0.1"            # la pantalla solo se sirve al propio equipo
 port = 8080
 idle_minutes = 20          # minutos sin tocar la pantalla antes del modo reposo
+# brand_contact = "WhatsApp 300 000 0000"  # contacto de Vano Systems en el modo reposo
 
 [[cameras]]
 id = "mesa1-principal"        # letras, números y guiones

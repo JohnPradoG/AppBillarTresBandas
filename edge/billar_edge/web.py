@@ -76,6 +76,7 @@ class App:
             "delay_seconds": delay,
             "delay_choices": list(settings.DELAY_CHOICES),
             "idle_minutes": self.cfg.idle_minutes,
+            "brand_contact": self.cfg.brand_contact,
             "status": None if stale else status,
         }
 
