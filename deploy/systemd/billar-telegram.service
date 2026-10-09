@@ -1,0 +1,18 @@
+[Unit]
+Description=Bot de Telegram para compartir jugadas (opcional)
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+User=billar
+Group=billar
+Environment=BILLAR_CONFIG=/etc/billar/billar.toml
+ExecStart=/opt/billar/current/venv/bin/billar telegram
+# Sin bot configurado termina con éxito y no se reinicia.
+Restart=on-failure
+RestartSec=10
+Nice=10
+
+[Install]
+WantedBy=multi-user.target

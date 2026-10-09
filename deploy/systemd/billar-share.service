@@ -1,0 +1,17 @@
+[Unit]
+Description=Enlaces para compartir jugadas en la red del billar
+After=network-online.target local-fs.target
+Wants=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+User=billar
+Group=billar
+Environment=BILLAR_CONFIG=/etc/billar/billar.toml
+ExecStart=/opt/billar/current/venv/bin/billar share-server
+Restart=always
+RestartSec=2
+Nice=5
+
+[Install]
+WantedBy=multi-user.target

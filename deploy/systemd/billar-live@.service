@@ -1,0 +1,23 @@
+[Unit]
+Description=Señal en vivo de la cámara %i para la pantalla
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=notify
+NotifyAccess=main
+User=billar
+Group=billar
+Environment=BILLAR_CONFIG=/etc/billar/billar.toml
+ExecStart=/opt/billar/current/venv/bin/billar live %i
+Restart=always
+RestartSec=2
+WatchdogSec=30
+KillMode=mixed
+TimeoutStopSec=10
+# La grabación tiene prioridad sobre la pantalla.
+Nice=5
+
+[Install]
+WantedBy=multi-user.target

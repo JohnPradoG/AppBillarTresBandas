@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Mesa</title>
+<link rel="stylesheet" href="app.css">
+<script src="vendor/hls.light.min.js"></script>
+<script type="module" src="app.js"></script>
+</head>
+<body>
+<main class="screen">
+
+  <section class="panel p1" data-player="0" aria-label="Jugador 1">
+    <header class="panel-head">
+      <span class="name"><span class="ball white"></span><span data-name>Jugador 1</span></span>
+      <span class="turn-badge" data-badge></span>
+    </header>
+    <div class="score" data-score>0</div>
+    <div class="quick">
+      <span class="caption">Marcar carambolas</span>
+      <div class="quick-row">
+        <button class="plus" data-add="1" aria-label="Sumar una carambola al jugador 1">+1</button><button data-add="2">+2</button><button data-add="3">+3</button>
+        <button data-add="5">+5</button><button class="minus" data-sub aria-label="Restar una carambola al jugador 1">−1</button>
+      </div>
+    </div>
+    <div class="stats">
+      <div class="stat"><span class="caption">Serie mayor</span><span class="num" data-best>0</span></div>
+      <div class="stat"><span class="caption">Promedio</span><span class="num" data-avg>0,000</span></div>
+    </div>
+  </section>
+
+  <section class="center">
+    <div class="topbar">
+      <div class="table-name">
+        <span class="big" id="table-name">MESA</span>
+        <span class="sub" id="establishment"></span>
+      </div>
+      <div class="clock">
+        <span class="caption">TIEMPO DE PARTIDA</span>
+        <span class="num" id="game-time">00:00:00</span>
+      </div>
+      <div class="shot" id="shot">
+        <span class="caption">TIEMPO PARA TACAR</span>
+        <span class="num" id="shot-time">40</span>
+      </div>
+      <div class="rec" id="rec" role="status">
+        <span class="dot"></span><span id="rec-label">…</span>
+      </div>
+    </div>
+
+    <div class="video-box">
+      <video id="video" muted playsinline disablepictureinpicture></video>
+      <div class="video-msg" id="video-msg">Esperando la imagen de la cámara…</div>
+      <span class="video-age" id="video-age"></span>
+      <span class="brand"><span>VANO SYSTEMS</span></span>
+    </div>
+
+    <div class="row2">
+      <div class="innings"><span class="caption">Entradas</span><span class="num" id="innings">0</span></div>
+      <button class="menu-btn" id="menu-btn">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"></line><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="17" x2="20" y2="17"></line></svg>
+        <span>Jugadas y menú</span>
+      </button>
+    </div>
+    <div class="row3">
+      <button class="replay" id="replay-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"></path><polyline points="3 3 3 8 8 8"></polyline></svg>
+        <span>REPETICIÓN</span>
+      </button>
+      <button class="save" id="save-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>
+        <span>GUARDAR JUGADA</span>
+      </button>
+    </div>
+  </section>
+
+  <section class="panel p2" data-player="1" aria-label="Jugador 2">
+    <header class="panel-head">
+      <span class="name"><span class="ball yellow"></span><span data-name>Jugador 2</span></span>
+      <span class="turn-badge" data-badge></span>
+    </header>
+    <div class="score" data-score>0</div>
+    <div class="quick">
+      <span class="caption">Marcar carambolas</span>
+      <div class="quick-row">
+        <button class="plus" data-add="1" aria-label="Sumar una carambola al jugador 2">+1</button><button data-add="2">+2</button><button data-add="3">+3</button>
+        <button data-add="5">+5</button><button class="minus" data-sub aria-label="Restar una carambola al jugador 2">−1</button>
+      </div>
+    </div>
+    <div class="stats">
+      <div class="stat"><span class="caption">Serie mayor</span><span class="num" data-best>0</span></div>
+      <div class="stat"><span class="caption">Promedio</span><span class="num" data-avg>0,000</span></div>
+    </div>
+  </section>
+</main>
+
+<div class="sheet" id="menu" hidden>
+  <div class="sheet-card" role="dialog" aria-modal="true" aria-labelledby="menu-title">
+    <h2 id="menu-title">Menú</h2>
+    <h3>Retraso de la pantalla</h3>
+    <div class="delay-row" id="delay-row"></div>
+    <p class="hint">La grabación no cambia: solo cuánto tiempo después ves la jugada en pantalla.</p>
+    <h3>Grabaciones</h3>
+    <button class="wide" id="open-plays">Jugadas (repeticiones y guardadas)</button>
+    <button class="wide" id="open-history">Historial de los últimos días</button>
+    <h3>Partida</h3>
+    <div class="confirm-row">
+      <button class="wide" id="new-game">Nueva partida</button>
+      <button class="wide" id="rename-players">Cambiar nombres</button>
+    </div>
+    <button class="wide admin-btn" id="open-admin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg><span>Administración (con PIN)</span></button>
+    <button class="wide close" id="menu-close">Cerrar</button>
+  </div>
+</div>
+
+<div class="sheet" id="players" hidden>
+  <div class="sheet-card players-card" role="dialog" aria-modal="true" aria-labelledby="pl-sheet-title">
+    <h2 id="pl-sheet-title">Nueva partida</h2>
+    <p class="hint" id="pl-sheet-hint"></p>
+    <div class="pl-slots">
+      <button class="pl-slot" id="pl-slot-0"><span class="ball white"></span><span class="pl-slot-text"><span class="caption">Bola blanca</span><span data-value></span></span></button>
+      <button class="pl-slot" id="pl-slot-1"><span class="ball yellow"></span><span class="pl-slot-text"><span class="caption">Bola amarilla</span><span data-value></span></span></button>
+    </div>
+    <div id="pl-recent-wrap">
+      <h3>Jugadores recientes</h3>
+      <div class="pl-recent" id="pl-recent"></div>
+    </div>
+    <div class="keyboard" id="pl-keyboard"></div>
+    <div class="confirm-row">
+      <button class="wide" id="pl-sheet-cancel">Cancelar</button>
+      <button class="wide go" id="pl-sheet-ok">Empezar partida</button>
+    </div>
+  </div>
+</div>
+
+<section class="history-view" id="history" hidden aria-label="Historial">
+  <header class="hs-head">
+    <div class="rp-title">
+      <span class="hs-word">HISTORIAL</span>
+      <span class="rp-sub" id="hs-sub"></span>
+    </div>
+    <button class="hs-close" id="hs-close">VOLVER A LA PARTIDA</button>
+  </header>
+  <div class="hs-body">
+    <div class="hs-days" id="hs-days"></div>
+    <div class="hs-legend">
+      <span><i class="sw full"></i>Grabado</span>
+      <span><i class="sw part"></i>Con cortes</span>
+      <span><i class="sw none"></i>Sin grabación</span>
+    </div>
+    <h3 class="hs-step">1. Elige la hora</h3>
+    <div class="hs-hours" id="hs-hours"></div>
+    <h3 class="hs-step" id="hs-minutes-title">2. Elige el minuto</h3>
+    <div class="hs-minutes" id="hs-minutes"></div>
+    <p class="hs-empty" id="hs-msg" hidden></p>
+  </div>
+</section>
+
+<section class="plays-view" id="plays" hidden aria-label="Jugadas">
+  <header class="hs-head pl-head">
+    <div class="rp-title">
+      <span class="pl-word">JUGADAS</span>
+      <span class="rp-sub" id="pl-sub"></span>
+    </div>
+    <div class="pl-right">
+      <span class="pl-brand">VANO SYSTEMS</span>
+      <div class="rec" id="pl-rec"><span class="dot"></span><span id="pl-rec-label"></span></div>
+      <button class="hs-close" id="pl-close">VOLVER A LA PARTIDA</button>
+    </div>
+  </header>
+  <div class="pl-filters">
+    <button data-filter="date" id="pl-f-date"></button>
+    <button data-filter="hour" id="pl-f-hour"></button>
+    <button class="pl-static" id="pl-f-table" disabled></button>
+    <button data-filter="player" id="pl-f-player"></button>
+    <button data-filter="game" id="pl-f-game"></button>
+    <button class="pl-only" id="pl-f-protected"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg><span>Solo protegidas</span></button>
+    <div class="pl-gap"></div>
+    <button class="pl-history" id="pl-to-history">Buscar por hora en el historial</button>
+  </div>
+  <div class="pl-table">
+    <div class="pl-row pl-th">
+      <span>Hora</span><span>Jugador en turno</span><span>Mesa</span><span>Partida</span><span>Marcador</span><span>Estado</span><span></span>
+    </div>
+    <div class="pl-rows" id="pl-rows"></div>
+    <p class="hs-empty pl-empty" id="pl-msg" hidden></p>
+  </div>
+  <footer class="pl-foot" id="pl-foot"></footer>
+</section>
+
+<div class="sheet" id="pl-picker" hidden>
+  <div class="sheet-card pl-picker-card" role="dialog" aria-modal="true" aria-labelledby="pl-picker-title">
+    <h2 id="pl-picker-title"></h2>
+    <div class="pl-choices" id="pl-choices"></div>
+    <button class="wide close" id="pl-picker-close">Cerrar</button>
+  </div>
+</div>
+
+<section class="replay-view" id="replay" hidden aria-label="Repetición">
+  <header class="rp-head">
+    <div class="rp-title">
+      <span class="rp-word" id="rp-word">REPETICIÓN</span>
+      <span class="rp-sub" id="rp-sub"></span>
+    </div>
+    <div class="rec" id="rp-rec"><span class="dot"></span><span id="rp-rec-label"></span></div>
+  </header>
+  <div class="rp-main">
+    <div class="rp-left">
+      <div class="rp-stage" id="rp-stage">
+        <div class="rp-zoom" id="rp-zoom"><video id="rp-video" muted playsinline disablepictureinpicture></video></div>
+        <div class="video-msg" id="rp-msg">Preparando la repetición…</div>
+        <div class="rp-chips">
+          <span class="rp-chip" id="rp-clock"></span>
+          <span class="rp-chip muted" id="rp-zoom-chip" hidden></span>
+        </div>
+        <div class="rp-zoom-btns">
+          <button id="rp-zoom-in" aria-label="Acercar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><line x1="16" y1="16" x2="21" y2="21"></line><line x1="8" y1="11" x2="14" y2="11"></line><line x1="11" y1="8" x2="11" y2="14"></line></svg></button>
+          <button id="rp-zoom-out" aria-label="Alejar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><line x1="16" y1="16" x2="21" y2="21"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg></button>
+          <button id="rp-zoom-fit" aria-label="Ver mesa completa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 9 4 4 9 4"></polyline><polyline points="20 9 20 4 15 4"></polyline><polyline points="4 15 4 20 9 20"></polyline><polyline points="20 15 20 20 15 20"></polyline></svg></button>
+        </div>
+        <span class="brand"><span>VANO SYSTEMS</span></span>
+      </div>
+      <div class="rp-controls">
+        <div class="rp-bar" id="rp-bar">
+          <div class="rp-fill" id="rp-fill"></div>
+          <div class="rp-mark" id="rp-mark"></div>
+          <div class="rp-thumb" id="rp-thumb"></div>
+        </div>
+        <div class="rp-labels">
+          <span id="rp-from"></span>
+          <span class="rp-moment" id="rp-moment"></span>
+          <span id="rp-to"></span>
+        </div>
+        <div class="rp-row">
+          <div class="rp-steps">
+            <button data-step="-5">−5 s</button>
+            <button data-step="-1">−1 s</button>
+            <button class="rp-frame" data-frame="-1" aria-label="Cuadro anterior">
+              <svg viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="5" width="3" height="14" rx="1"></rect><path d="M19 5.5v13a1 1 0 0 1-1.5.86l-9.5-6.5a1 1 0 0 1 0-1.72l9.5-6.5A1 1 0 0 1 19 5.5z"></path></svg>
+            </button>
+            <button class="rp-play" id="rp-play" aria-label="Pausar">
+              <svg class="i-pause" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"></rect><rect x="14" y="5" width="4" height="14" rx="1"></rect></svg>
+              <svg class="i-play" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12-7.5a1 1 0 0 0 0-1.72l-12-7.5A1 1 0 0 0 7 4.5z"></path></svg>
+            </button>
+            <button class="rp-frame" data-frame="1" aria-label="Cuadro siguiente">
+              <svg viewBox="0 0 24 24" fill="currentColor"><rect x="17" y="5" width="3" height="14" rx="1"></rect><path d="M5 5.5v13a1 1 0 0 0 1.5.86l9.5-6.5a1 1 0 0 0 0-1.72l-9.5-6.5A1 1 0 0 0 5 5.5z"></path></svg>
+            </button>
+            <button data-step="1">+1 s</button>
+            <button data-step="5">+5 s</button>
+          </div>
+          <div class="rp-speeds" id="rp-speeds">
+            <button data-rate="1">1x</button>
+            <button data-rate="0.5">0,5x</button>
+            <button data-rate="0.25">0,25x</button>
+            <button data-rate="0.1">0,1x</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <aside class="rp-side">
+      <div class="rp-card">
+        <span class="caption" id="rp-card-caption">Jugada</span>
+        <span class="num rp-time" id="rp-time"></span>
+        <span class="rp-turn" id="rp-turn"></span>
+        <span class="rp-score" id="rp-score"></span>
+      </div>
+      <div class="rp-nav" id="rp-nav" hidden>
+        <button id="rp-prev">◀ Minuto anterior</button>
+        <button id="rp-next">Minuto siguiente ▶</button>
+      </div>
+      <div class="rp-spacer"></div>
+      <button class="save rp-save" id="rp-save">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>
+        <span>GUARDAR JUGADA</span>
+      </button>
+      <button class="rp-share" id="rp-share"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"></line><line x1="15.4" y1="6.5" x2="8.6" y2="10.5"></line></svg><span>COMPARTIR</span></button>
+      <button class="rp-back" id="rp-back">
+        <span class="rp-back-main" id="rp-back-main">VOLVER A LA PARTIDA</span>
+        <span class="rp-back-sub" id="rp-back-sub">Vuelve sola en 60 s sin tocar</span>
+      </button>
+    </aside>
+  </div>
+</section>
+
+<div class="sheet share-sheet" id="share" hidden>
+  <div class="sheet-card share-card" role="dialog" aria-modal="true" aria-labelledby="sh-title">
+    <div class="sh-head">
+      <h2 id="sh-title">Compartir jugada</h2>
+      <span class="rp-sub" id="sh-sub"></span>
+    </div>
+    <div class="sh-wait" id="sh-wait"><span class="spinner"></span><span id="sh-wait-text"></span></div>
+    <div id="sh-ready" hidden>
+      <div class="sh-cards">
+        <div class="sh-card">
+          <h3>WhatsApp o guardar en el celular</h3>
+          <div class="sh-qr" id="sh-qr-web"></div>
+          <ol>
+            <li>Conéctate al <b>WiFi del billar</b>.</li>
+            <li>Escanea el código con la cámara.</li>
+            <li>Toca <b>Descargar video</b> y compártelo por WhatsApp.</li>
+          </ol>
+          <span class="sh-url" id="sh-url"></span>
+        </div>
+        <div class="sh-card" id="sh-card-tg">
+          <h3>Telegram</h3>
+          <div class="sh-qr" id="sh-qr-tg"></div>
+          <ol>
+            <li>Escanea el código con la cámara.</li>
+            <li>Toca <b>Iniciar</b> en Telegram.</li>
+            <li>El video te llega al chat.</li>
+          </ol>
+        </div>
+      </div>
+      <p class="hint" id="sh-foot"></p>
+    </div>
+    <button class="wide close" id="sh-close">Cerrar</button>
+  </div>
+</div>
+
+<section class="admin-view" id="admin" hidden aria-label="Administración">
+  <header class="hs-head ad-head">
+    <div class="rp-title">
+      <span class="ad-word">ADMINISTRACIÓN</span>
+      <span class="rp-sub" id="ad-sub"></span>
+    </div>
+    <div class="pl-right">
+      <span class="ad-user" id="ad-user"></span>
+      <button class="hs-close ad-exit" id="ad-exit">SALIR</button>
+    </div>
+  </header>
+  <div class="ad-main">
+    <nav class="ad-tabs" id="ad-tabs">
+      <button data-tab="estado">Estado</button>
+      <button data-tab="ajustes" data-perm="ajustes">Ajustes</button>
+      <button data-tab="jugadas" data-perm="desproteger">Jugadas protegidas</button>
+      <button data-tab="usuarios" data-perm="usuarios">Usuarios</button>
+      <button data-tab="registro" data-perm="auditoria">Registro</button>
+      <button data-tab="alertas" data-perm="alertas">Alertas</button>
+      <span class="ad-tabs-gap"></span>
+      <span class="ad-note">Se cierra sola a los 5 minutos sin tocar.</span>
+    </nav>
+    <div class="ad-body" id="ad-body"></div>
+  </div>
+</section>
+
+<div class="sheet pin-sheet" id="pin" hidden>
+  <div class="sheet-card pin-card" role="dialog" aria-modal="true" aria-labelledby="pin-title">
+    <h2 id="pin-title">Administración</h2>
+    <p class="hint" id="pin-hint"></p>
+    <div class="pin-dots" id="pin-dots"></div>
+    <p class="pin-error" id="pin-error"></p>
+    <div class="pin-pad" id="pin-pad"></div>
+    <button class="wide close" id="pin-cancel">Cancelar</button>
+  </div>
+</div>
+
+<div class="sheet ad-sheet" id="ad-text" hidden>
+  <div class="sheet-card players-card" role="dialog" aria-modal="true" aria-labelledby="ad-text-title">
+    <h2 id="ad-text-title"></h2>
+    <div class="ad-text-value" id="ad-text-value"></div>
+    <div class="keyboard" id="ad-keyboard"></div>
+    <div class="confirm-row">
+      <button class="wide" id="ad-text-cancel">Cancelar</button>
+      <button class="wide go" id="ad-text-ok">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="sheet ad-sheet" id="ad-dialog" hidden>
+  <div class="sheet-card ad-dialog-card" role="dialog" aria-modal="true" aria-labelledby="ad-dialog-title">
+    <h2 id="ad-dialog-title"></h2>
+    <p class="hint" id="ad-dialog-hint"></p>
+    <div class="ad-dialog-body" id="ad-dialog-body"></div>
+    <div class="confirm-row" id="ad-dialog-actions">
+      <button class="wide" id="ad-dialog-cancel">Cancelar</button>
+      <button class="wide go" id="ad-dialog-ok">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<div class="rest" id="rest" hidden>
+  <canvas class="rest-balls" id="rest-balls"></canvas>
+  <div class="rest-card" id="rest-card">
+    <span class="rest-place" id="rest-place"></span>
+    <span class="rest-table"><span id="rest-table"></span> · <span id="rest-time">00:00</span></span>
+    <span class="rest-line"></span>
+    <span class="rest-by">Sistema de repetición creado por</span>
+    <span class="rest-logo"><img src="vano-logo.svg" alt=""><span class="rest-brand"><span class="rest-vano">VANO</span><span class="rest-systems">SYSTEMS</span></span></span>
+    <span class="rest-tag">Repetición instantánea · Cámara lenta cuadro a cuadro · Jugadas guardadas</span>
+    <span class="rest-contact" id="rest-contact" hidden></span>
+    <span class="rest-hint">Toca la pantalla para jugar</span>
+    <span class="rest-rec" id="rest-rec"></span>
+  </div>
+</div>
+</body>
+</html>

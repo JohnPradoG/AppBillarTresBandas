@@ -1,0 +1,131 @@
+"""Comando `billar`: punto de entrada de los servicios y herramientas de diagnóstico."""
+
+from __future__ import annotations
+
+import argparse
+import logging
+import sys
+from datetime import datetime
+
+from . import config as config_mod
+from . import events, health, live, panel, plays, recorder, retention, share, statefile, telegram, update, web
+from .db import connect
+
+
+def _ts(ms: int) -> str:
+    return datetime.fromtimestamp(ms / 1000).strftime("%d/%m/%Y %H:%M:%S")
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(prog="billar", description="Sistema de grabación de la mesa de billar")
+    parser.add_argument("--config", help=f"archivo de configuración (por defecto {config_mod.DEFAULT_CONFIG_PATH})")
+    parser.add_argument("-v", "--verbose", action="store_true")
+    sub = parser.add_subparsers(dest="command", required=True)
+    p = sub.add_parser("record", help="graba una cámara de forma continua (servicio)")
+    p.add_argument("camera_id")
+    p = sub.add_parser("live", help="señal en vivo de una cámara para la pantalla (servicio)")
+    p.add_argument("camera_id")
+    sub.add_parser("ui", help="servidor local de la pantalla táctil (servicio)")
+    sub.add_parser("health", help="monitor de salud (servicio)")
+    sub.add_parser("share-server", help="enlaces para compartir jugadas en la red del billar (servicio)")
+    sub.add_parser("telegram", help="bot de Telegram para compartir jugadas (servicio, opcional)")
+    sub.add_parser("panel", help="panel de administración por la red del billar, con HTTPS (servicio)")
+    sub.add_parser("retention", help="borra los segmentos vencidos (lo ejecuta un temporizador)")
+    sub.add_parser("status", help="muestra el estado actual")
+    p = sub.add_parser("events", help="muestra el registro de eventos")
+    p.add_argument("-n", type=int, default=30)
+    sub.add_parser("verify-plays", help="revisa que las jugadas guardadas existan y no hayan cambiado")
+    sub.add_parser("check-config", help="valida el archivo de configuración")
+    sub.add_parser("cameras", help="lista los ids de las cámaras configuradas")
+    sub.add_parser("backup-db", help="copia la base de datos a <data_dir>/respaldos (guarda las 5 últimas)")
+    p = sub.add_parser("note-event", help=argparse.SUPPRESS)
+    p.add_argument("level", choices=["info", "advertencia", "error"])
+    p.add_argument("type")
+    p.add_argument("message")
+    p = sub.add_parser("update", help="activa una versión del programa o vuelve a la anterior (como root)")
+    p.add_argument("action", choices=["apply", "rollback", "list"])
+    p.add_argument("--release", help="carpeta dentro de /opt/billar/releases (para apply)")
+    p.add_argument("--prefix", default=str(update.PREFIX))
+    args = parser.parse_args(argv)
+
+    logging.basicConfig(
+        level=logging.DEBUG if args.verbose else logging.INFO,
+        format="%(levelname)s %(name)s: %(message)s",
+        stream=sys.stderr,
+    )
+    cfg = config_mod.load(args.config)
+
+    if args.command == "record":
+        recorder.main(cfg, args.camera_id)
+    elif args.command == "live":
+        live.main(cfg, args.camera_id)
+    elif args.command == "ui":
+        web.main(cfg)
+    elif args.command == "health":
+        health.main(cfg)
+    elif args.command == "share-server":
+        share.main(cfg)
+    elif args.command == "panel":
+        panel.main(cfg)
+    elif args.command == "telegram":
+        return telegram.main(cfg)
+    elif args.command == "retention":
+        conn = connect(cfg.db_path)
+        result = retention.run(conn, cfg)
+        print(f"Borrados por antigüedad: {result.deleted_expired}; por espacio: {result.deleted_for_space}; "
+              f"liberados {result.freed_bytes / 1e9:.2f} GB")
+    elif args.command == "status":
+        report = statefile.read(cfg.run_dir / "status.json")
+        if report is None:
+            print("Sin estado: el monitor de salud no está funcionando.")
+            return 1
+        print(f"Estado: {report['label']}")
+        for cam in report["cameras"]:
+            extra = f" ({cam['detail']})" if cam.get("detail") else ""
+            print(f"  Mesa {cam['table_number']} · {cam['camera_id']}: {cam['label']}{extra}")
+        st = report["storage"]
+        print(f"  Disco: {st['state']}, {st['free_percent']} % libre" if st["free_percent"] is not None
+              else f"  Disco: {st['detail']}")
+        return 0 if report["ok"] else 2
+    elif args.command == "events":
+        conn = connect(cfg.db_path)
+        for row in reversed(events.recent(conn, args.n)):
+            cam = f" [{row['camera_id']}]" if row["camera_id"] else ""
+            print(f"{_ts(row['ts'])}  {row['level']:<11}{cam} {row['message']}")
+    elif args.command == "verify-plays":
+        conn = connect(cfg.db_path)
+        total = conn.execute("SELECT COUNT(*) FROM plays WHERE protected_at IS NOT NULL").fetchone()[0]
+        problems = plays.verify(conn)
+        for p in problems:
+            print(f"{p['problema']}: {p['path']}")
+        print(f"Jugadas guardadas: {total}; con problemas: {len(problems)}")
+        return 2 if problems else 0
+    elif args.command == "cameras":
+        for cam in cfg.cameras:
+            print(cam.id)
+    elif args.command == "backup-db":
+        print(f"Copia de la base de datos: {update.backup_db(cfg)}")
+    elif args.command == "note-event":
+        events.record(connect(cfg.db_path), args.level, args.type, args.message)
+    elif args.command == "update":
+        from pathlib import Path
+        prefix = Path(args.prefix)
+        if args.action == "list":
+            active = update.current(prefix)
+            for name in update.releases(prefix):
+                print(f"{'*' if name == active else ' '} {name}")
+            return 0
+        up = update.Updater(cfg, prefix=prefix, config_path=args.config or config_mod.DEFAULT_CONFIG_PATH)
+        if args.action == "rollback":
+            return up.rollback()
+        if not args.release:
+            parser.error("falta --release")
+        return up.apply(args.release)
+    elif args.command == "check-config":
+        print(f"Configuración válida: {len(cfg.cameras)} cámara(s), retención {cfg.retention_days} días, "
+              f"segmentos de {cfg.segment_seconds} s, video en {cfg.recordings_dir}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,0 +1,57 @@
+# Configuración de la mesa. Se instala en /etc/billar/billar.toml
+# Las horas se guardan siempre en UTC; la pantalla las muestra en la hora local.
+
+[general]
+establishment_name = "Billar XYZ"
+data_dir = "/var/lib/billar"          # base de datos (disco del sistema)
+recordings_dir = "/srv/billar/video"  # video (partición o disco dedicado)
+run_dir = "/run/billar"               # estado en memoria
+retention_days = 7
+
+[storage]
+require_mount = true          # no grabar si la partición de video no está montada
+warn_free_percent = 15        # advertencia de almacenamiento
+critical_free_percent = 5     # se borran segmentos antiguos antes de tiempo
+# Jugadas guardadas (GUARDAR JUGADA): copias que duran protected_days días.
+# Por defecto en <recordings_dir>/jugadas, en el mismo disco de video.
+# protected_dir = "/srv/billar/video/jugadas"
+protected_quota_gb = 100      # aviso cuando las jugadas guardadas ocupan más
+protected_days = 30           # días que dura una jugada guardada (0 = nunca se borra)
+
+[recorder]
+segment_seconds = 60          # segmentos de 1 minuto alineados al reloj
+stall_seconds = 15            # sin avance => se reinicia la grabación
+no_signal_seconds = 30        # imagen negra o congelada => SIN SEÑAL
+
+[ui]
+host = "127.0.0.1"            # la pantalla solo se sirve al propio equipo
+port = 8080
+idle_minutes = 20          # minutos sin tocar la pantalla antes del modo reposo
+# brand_contact = ""   # contacto en el modo reposo; por defecto el de Vano Systems, "" lo oculta
+
+[share]
+# Compartir jugadas. El celular del cliente, conectado al WiFi del billar,
+# escanea el QR de la pantalla y descarga el video para mandarlo por WhatsApp.
+port = 8081                # solo sirve los videos compartidos (abrir en el firewall de la red local)
+# address = "192.168.1.50" # IP del equipo en el WiFi; vacío = se detecta sola
+link_hours = 24            # cuánto dura cada enlace
+# logo = "/etc/billar/otro-logo.png"   # cambia el logo de la marca de agua (por defecto, el de Vano Systems)
+# Telegram (opcional, gratis): crear un bot con @BotFather y poner aquí su token y nombre.
+# telegram_token = "123456:ABC..."
+# telegram_bot = "BillarXYZBot"
+
+[[cameras]]
+id = "mesa1-principal"        # letras, números y guiones
+table_number = 1
+role = "principal"
+# Hikvision: /Streaming/Channels/101 · Dahua: /cam/realmonitor?channel=1&subtype=0
+# TP-Link VIGI: /stream1
+url = "rtsp://usuario:CONTRASEÑA@192.168.10.64:554/Streaming/Channels/101"
+
+[panel]
+# Panel de administración desde un computador o celular (HTTPS, entra con PIN).
+# En la red del billar: https://<IP del equipo>:8443. Desde fuera: por la VPN
+# (sudo billar-remoto), nunca abriendo puertos en el router.
+# port = 8443
+# cert = "/var/lib/billar/tls/panel.crt"   # por defecto se crea uno propio
+# key = "/var/lib/billar/tls/panel.key"

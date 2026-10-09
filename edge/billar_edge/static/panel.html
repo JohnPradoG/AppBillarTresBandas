@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Administración · Vano Systems</title>
+<link rel="stylesheet" href="app.css">
+<link rel="stylesheet" href="panel.css">
+<script type="module" src="panel.js"></script>
+</head>
+<body class="panel-page">
+<main class="pn-door" id="pn-door">
+  <img src="vano-logo.svg" alt="">
+  <h1>Administración del billar</h1>
+  <p id="pn-msg">Entra con tu PIN. Es el mismo de la pantalla de la mesa.</p>
+  <button class="wide go" id="pn-enter">Entrar con PIN</button>
+  <span class="pn-brand">VANO SYSTEMS</span>
+</main>
+
+<!-- Igual que en index.html (lo revisa tests/test_panel.py). -->
+<section class="admin-view" id="admin" hidden aria-label="Administración">
+  <header class="hs-head ad-head">
+    <div class="rp-title">
+      <span class="ad-word">ADMINISTRACIÓN</span>
+      <span class="rp-sub" id="ad-sub"></span>
+    </div>
+    <div class="pl-right">
+      <span class="ad-user" id="ad-user"></span>
+      <button class="hs-close ad-exit" id="ad-exit">SALIR</button>
+    </div>
+  </header>
+  <div class="ad-main">
+    <nav class="ad-tabs" id="ad-tabs">
+      <button data-tab="estado">Estado</button>
+      <button data-tab="ajustes" data-perm="ajustes">Ajustes</button>
+      <button data-tab="jugadas" data-perm="desproteger">Jugadas protegidas</button>
+      <button data-tab="usuarios" data-perm="usuarios">Usuarios</button>
+      <button data-tab="registro" data-perm="auditoria">Registro</button>
+      <button data-tab="alertas" data-perm="alertas">Alertas</button>
+      <span class="ad-tabs-gap"></span>
+      <span class="ad-note">Se cierra sola a los 5 minutos sin tocar.</span>
+    </nav>
+    <div class="ad-body" id="ad-body"></div>
+  </div>
+</section>
+
+<div class="sheet pin-sheet" id="pin" hidden>
+  <div class="sheet-card pin-card" role="dialog" aria-modal="true" aria-labelledby="pin-title">
+    <h2 id="pin-title">Administración</h2>
+    <p class="hint" id="pin-hint"></p>
+    <div class="pin-dots" id="pin-dots"></div>
+    <p class="pin-error" id="pin-error"></p>
+    <div class="pin-pad" id="pin-pad"></div>
+    <button class="wide close" id="pin-cancel">Cancelar</button>
+  </div>
+</div>
+
+<div class="sheet ad-sheet" id="ad-text" hidden>
+  <div class="sheet-card players-card" role="dialog" aria-modal="true" aria-labelledby="ad-text-title">
+    <h2 id="ad-text-title"></h2>
+    <div class="ad-text-value" id="ad-text-value"></div>
+    <div class="keyboard" id="ad-keyboard"></div>
+    <div class="confirm-row">
+      <button class="wide" id="ad-text-cancel">Cancelar</button>
+      <button class="wide go" id="ad-text-ok">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="sheet ad-sheet" id="ad-dialog" hidden>
+  <div class="sheet-card ad-dialog-card" role="dialog" aria-modal="true" aria-labelledby="ad-dialog-title">
+    <h2 id="ad-dialog-title"></h2>
+    <p class="hint" id="ad-dialog-hint"></p>
+    <div class="ad-dialog-body" id="ad-dialog-body"></div>
+    <div class="confirm-row" id="ad-dialog-actions">
+      <button class="wide" id="ad-dialog-cancel">Cancelar</button>
+      <button class="wide go" id="ad-dialog-ok">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+</body>
+</html>

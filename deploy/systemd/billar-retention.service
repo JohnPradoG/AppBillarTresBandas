@@ -1,0 +1,11 @@
+[Unit]
+Description=Limpieza del historial de video (7 días)
+
+[Service]
+Type=oneshot
+User=billar
+Group=billar
+Environment=BILLAR_CONFIG=/etc/billar/billar.toml
+ExecStart=/opt/billar/current/venv/bin/billar retention
+Nice=10
+IOSchedulingClass=idle

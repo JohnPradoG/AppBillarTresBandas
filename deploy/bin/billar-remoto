@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# Acceso remoto por VPN (Tailscale, plan gratuito). No abre puertos en el
+# router del billar: el equipo se conecta hacia afuera y solo los equipos de
+# tu cuenta de Tailscale lo ven.
+#
+#   sudo billar-remoto              instala Tailscale y muestra el enlace para entrar a tu cuenta
+#   sudo billar-remoto --estado     muestra la IP de la VPN y el enlace del panel
+set -euo pipefail
+
+if [[ $EUID -ne 0 ]]; then
+  echo "Ejecuta este script con sudo." >&2
+  exit 1
+fi
+
+if [[ "${1:-}" != "--estado" ]]; then
+  if ! command -v tailscale >/dev/null 2>&1; then
+    echo "==> Instalando Tailscale (repositorio oficial)"
+    curl -fsSL https://tailscale.com/install.sh | sh
+  fi
+  systemctl enable --now tailscaled
+  NAME="billar-$(hostname -s)"
+  echo "==> Conectando a la VPN como $NAME"
+  echo "    Abre el enlace que aparece abajo e inicia sesión con la cuenta de Vano Systems."
+  # --ssh: soporte remoto por la VPN sin abrir el puerto 22 a Internet.
+  tailscale up --ssh --hostname "$NAME"
+fi
+
+IP=$(tailscale ip -4 2>/dev/null | head -n1 || true)
+if [[ -z "$IP" ]]; then
+  echo "La VPN no está conectada todavía."
+  exit 1
+fi
+echo
+echo "VPN conectada. Desde un equipo con Tailscale en la misma cuenta:"
+echo "  Panel:   https://$IP:8443"
+echo "  Soporte: ssh <usuario>@$IP   (y luego: sudo billar-actualizar)"

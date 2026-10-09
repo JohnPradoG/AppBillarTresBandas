@@ -1,0 +1,27 @@
+[Unit]
+Description=Grabación continua de la cámara %i
+After=local-fs.target network-online.target
+Wants=network-online.target
+# Nunca dejar de intentarlo, por muchos fallos seguidos que haya.
+StartLimitIntervalSec=0
+
+[Service]
+Type=notify
+NotifyAccess=main
+User=billar
+Group=billar
+Environment=BILLAR_CONFIG=/etc/billar/billar.toml
+ExecStart=/opt/billar/current/venv/bin/billar record %i
+Restart=always
+RestartSec=2
+# Si el supervisor se cuelga, systemd lo reinicia.
+WatchdogSec=30
+# SIGTERM solo al supervisor: él detiene FFmpeg con orden y cierra el segmento.
+KillMode=mixed
+TimeoutStopSec=25
+Nice=-5
+IOSchedulingClass=best-effort
+IOSchedulingPriority=0
+
+[Install]
+WantedBy=multi-user.target
