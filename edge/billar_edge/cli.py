@@ -8,7 +8,7 @@ import sys
 from datetime import datetime
 
 from . import config as config_mod
-from . import events, health, live, plays, recorder, retention, share, statefile, telegram, web
+from . import events, health, live, panel, plays, recorder, retention, share, statefile, telegram, update, web
 from .db import connect
 
 
@@ -29,6 +29,7 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("health", help="monitor de salud (servicio)")
     sub.add_parser("share-server", help="enlaces para compartir jugadas en la red del billar (servicio)")
     sub.add_parser("telegram", help="bot de Telegram para compartir jugadas (servicio, opcional)")
+    sub.add_parser("panel", help="panel de administración por la red del billar, con HTTPS (servicio)")
     sub.add_parser("retention", help="borra los segmentos vencidos (lo ejecuta un temporizador)")
     sub.add_parser("status", help="muestra el estado actual")
     p = sub.add_parser("events", help="muestra el registro de eventos")
@@ -36,6 +37,15 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("verify-plays", help="revisa que las jugadas guardadas existan y no hayan cambiado")
     sub.add_parser("check-config", help="valida el archivo de configuración")
     sub.add_parser("cameras", help="lista los ids de las cámaras configuradas")
+    sub.add_parser("backup-db", help="copia la base de datos a <data_dir>/respaldos (guarda las 5 últimas)")
+    p = sub.add_parser("note-event", help=argparse.SUPPRESS)
+    p.add_argument("level", choices=["info", "advertencia", "error"])
+    p.add_argument("type")
+    p.add_argument("message")
+    p = sub.add_parser("update", help="activa una versión del programa o vuelve a la anterior (como root)")
+    p.add_argument("action", choices=["apply", "rollback", "list"])
+    p.add_argument("--release", help="carpeta dentro de /opt/billar/releases (para apply)")
+    p.add_argument("--prefix", default=str(update.PREFIX))
     args = parser.parse_args(argv)
 
     logging.basicConfig(
@@ -55,6 +65,8 @@ def main(argv: list[str] | None = None) -> int:
         health.main(cfg)
     elif args.command == "share-server":
         share.main(cfg)
+    elif args.command == "panel":
+        panel.main(cfg)
     elif args.command == "telegram":
         return telegram.main(cfg)
     elif args.command == "retention":
@@ -91,6 +103,24 @@ def main(argv: list[str] | None = None) -> int:
     elif args.command == "cameras":
         for cam in cfg.cameras:
             print(cam.id)
+    elif args.command == "backup-db":
+        print(f"Copia de la base de datos: {update.backup_db(cfg)}")
+    elif args.command == "note-event":
+        events.record(connect(cfg.db_path), args.level, args.type, args.message)
+    elif args.command == "update":
+        from pathlib import Path
+        prefix = Path(args.prefix)
+        if args.action == "list":
+            active = update.current(prefix)
+            for name in update.releases(prefix):
+                print(f"{'*' if name == active else ' '} {name}")
+            return 0
+        up = update.Updater(cfg, prefix=prefix, config_path=args.config or config_mod.DEFAULT_CONFIG_PATH)
+        if args.action == "rollback":
+            return up.rollback()
+        if not args.release:
+            parser.error("falta --release")
+        return up.apply(args.release)
     elif args.command == "check-config":
         print(f"Configuración válida: {len(cfg.cameras)} cámara(s), retención {cfg.retention_days} días, "
               f"segmentos de {cfg.segment_seconds} s, video en {cfg.recordings_dir}")

@@ -63,6 +63,12 @@ class Config:
     share_logo: Path | None = None   # otro PNG para la marca de agua (por defecto, el logo de Vano Systems)
     telegram_token: str = ""
     telegram_bot: str = ""           # nombre del bot, sin @
+    # Panel de administración por la red del billar o la VPN (Fase 8, parte 2):
+    # HTTPS con certificado propio, entra con el PIN de un usuario.
+    panel_host: str = "0.0.0.0"
+    panel_port: int = 8443
+    panel_cert: Path | None = None   # por defecto <data_dir>/tls/panel.crt y panel.key
+    panel_key: Path | None = None
     cameras: tuple[CameraConfig, ...] = field(default_factory=tuple)
 
     @property
@@ -89,6 +95,11 @@ class Config:
     def plays_dir(self) -> Path:
         return self.protected_dir or self.recordings_dir / "jugadas"
 
+    @property
+    def panel_tls(self) -> tuple[Path, Path]:
+        tls = self.data_dir / "tls"
+        return self.panel_cert or tls / "panel.crt", self.panel_key or tls / "panel.key"
+
     def live_dir(self, camera_id: str) -> Path:
         return self.camera_run_dir(camera_id) / "live"
 
@@ -102,6 +113,7 @@ def load(path: str | os.PathLike | None = None) -> Config:
     recorder = raw.get("recorder", {})
     ui = raw.get("ui", {})
     share = raw.get("share", {})
+    panel = raw.get("panel", {})
     cameras = tuple(
         CameraConfig(
             id=c["id"],
@@ -145,5 +157,9 @@ def load(path: str | os.PathLike | None = None) -> Config:
         share_logo=Path(share["logo"]) if share.get("logo") else None,
         telegram_token=str(share.get("telegram_token", "")),
         telegram_bot=str(share.get("telegram_bot", "")).lstrip("@"),
+        panel_host=str(panel.get("host", "0.0.0.0")),
+        panel_port=int(panel.get("port", 8443)),
+        panel_cert=Path(panel["cert"]) if panel.get("cert") else None,
+        panel_key=Path(panel["key"]) if panel.get("key") else None,
         cameras=cameras,
     )

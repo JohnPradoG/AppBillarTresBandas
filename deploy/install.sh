@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Instala o actualiza los servicios de la mesa (grabación y pantalla) en el mini PC.
+# Instala los servicios de la mesa en el mini PC (y cambios del sistema: paquetes,
+# usuarios, servicios). Para actualizar solo el programa: sudo billar-actualizar.
 # Uso (desde la raíz del repositorio):  sudo ./deploy/install.sh
 set -euo pipefail
 
@@ -39,23 +40,15 @@ if ! id billar-kiosko >/dev/null 2>&1; then
 fi
 usermod -aG video,render,input billar-kiosko
 
-echo "==> Programa en $PREFIX"
-install -d "$PREFIX"
-rm -rf "$PREFIX/src"
-cp -r "$REPO_DIR/edge" "$PREFIX/src"
-if [[ ! -x "$PREFIX/venv/bin/python" ]]; then
-  python3 -m venv "$PREFIX/venv"
-fi
-"$PREFIX/venv/bin/pip" install -q --no-deps "$PREFIX/src"
-install -d "$PREFIX/bin"
-install -m 0755 "$REPO_DIR/deploy/bin/billar-navegador" "$PREFIX/bin/"
+echo "==> Panel por la red: certificado propio"
+# El panel se crea su certificado al arrancar (openssl); aquí solo la carpeta.
+install -d -o billar -g billar -m 0700 /var/lib/billar/tls
 
 echo "==> Configuración"
 if [[ ! -f "$CONFIG" ]]; then
   install -m 0640 -g billar "$REPO_DIR/deploy/billar.example.toml" "$CONFIG"
   echo "    Creado $CONFIG: edita la URL y la contraseña de la cámara antes de seguir."
 fi
-sudo -u billar BILLAR_CONFIG="$CONFIG" "$PREFIX/venv/bin/billar" check-config
 
 echo "==> Servicios"
 install -m 0644 "$REPO_DIR"/deploy/systemd/billar-recorder@.service /etc/systemd/system/
@@ -64,6 +57,7 @@ install -m 0644 "$REPO_DIR"/deploy/systemd/billar-live@.service /etc/systemd/sys
 install -m 0644 "$REPO_DIR"/deploy/systemd/billar-ui.service /etc/systemd/system/
 install -m 0644 "$REPO_DIR"/deploy/systemd/billar-share.service /etc/systemd/system/
 install -m 0644 "$REPO_DIR"/deploy/systemd/billar-telegram.service /etc/systemd/system/
+install -m 0644 "$REPO_DIR"/deploy/systemd/billar-panel.service /etc/systemd/system/
 install -m 0644 "$REPO_DIR"/deploy/systemd/billar-kiosk.service /etc/systemd/system/
 install -m 0644 "$REPO_DIR"/deploy/systemd/billar-retention.service /etc/systemd/system/
 install -m 0644 "$REPO_DIR"/deploy/systemd/billar-retention.timer /etc/systemd/system/
@@ -77,22 +71,26 @@ printf '[Journal]\nStorage=persistent\nSystemMaxUse=500M\n' > /etc/systemd/journ
 systemd-tmpfiles --create /etc/tmpfiles.d/billar.conf
 systemctl daemon-reload
 systemctl daemon-reexec   # aplica el watchdog de hardware
-systemctl enable --now billar-health.service billar-retention.timer
-systemctl enable billar-ui.service
-systemctl restart billar-ui.service
-systemctl enable billar-share.service billar-telegram.service
-systemctl restart billar-share.service billar-telegram.service
-for cam in $(sudo -u billar BILLAR_CONFIG="$CONFIG" "$PREFIX/venv/bin/billar" cameras); do
-  systemctl enable "billar-recorder@${cam}.service" "billar-live@${cam}.service"
-  systemctl restart "billar-recorder@${cam}.service" "billar-live@${cam}.service"
-done
+systemctl enable billar-health.service billar-retention.timer billar-ui.service billar-share.service \
+  billar-telegram.service billar-panel.service
 # La pantalla táctil ocupa tty1. Sin pantalla conectada no hace daño.
 systemctl disable getty@tty1.service 2>/dev/null || true
 systemctl enable billar-kiosk.service
-systemctl restart billar-kiosk.service
+
+echo "==> Programa en $PREFIX (versiones con vuelta atrás)"
+install -d "$PREFIX"
+"$REPO_DIR/deploy/bin/billar-actualizar" "$REPO_DIR"
+for cam in $(runuser -u billar -- "$PREFIX/current/venv/bin/billar" --config "$CONFIG" cameras); do
+  systemctl enable "billar-recorder@${cam}.service" "billar-live@${cam}.service"
+done
+systemctl start billar-retention.timer
+# Instalaciones anteriores tenían el programa en $PREFIX/venv y $PREFIX/src.
+rm -rf "$PREFIX/venv" "$PREFIX/src" "$PREFIX/bin"
 
 echo
 echo "Listo. La grabación y la pantalla arrancan solas con cada encendido."
 echo "  Estado:   billar --config $CONFIG status"
 echo "  Eventos:  billar --config $CONFIG events"
+echo "  Panel:    https://<IP del equipo>:8443 desde la red del billar (con PIN)"
+echo "  Actualizar:      sudo billar-actualizar        Volver atrás: sudo billar-actualizar --volver"
 echo "Recuerda activar en la BIOS: 'Restore on AC Power Loss = Power On'."

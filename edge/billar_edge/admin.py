@@ -16,9 +16,10 @@ from __future__ import annotations
 import secrets
 import shutil
 import sqlite3
+import subprocess
 from http import HTTPStatus
 
-from . import auth, events, plays, settings, statefile
+from . import auth, events, plays, settings, share, statefile
 from .config import Config
 from .db import connect, now_ms
 from .health import STALE_STATE_SECONDS
@@ -96,6 +97,9 @@ class AdminApi:
                 what = ", ".join(USER_LABELS[k] for k in changes)
                 auth.audit(conn, user, "usuario_modificado", f"Modificó a {row['name']} ({what})")
                 return {"user": auth.public_user(row), "users": self._users(conn)}
+        if method == "GET" and parts == ["jugadas"]:
+            self.sessions.user(token, "desproteger")
+            return {"plays": plays.search(conn, self.cfg, now_ms(), only_protected=True)}
         if method == "POST" and len(parts) == 3 and parts[0] == "jugadas" and parts[2] == "desproteger":
             user = self.sessions.user(token, "desproteger")
             reason = str(body.get("reason") or "")
@@ -172,6 +176,10 @@ class AdminApi:
                 "bot": self.cfg.telegram_bot if self.cfg.telegram_token else None,
                 "alerts_linked": bool(settings.get_system(conn, settings.ALERT_CHAT)),
             },
+            "remote": {
+                "panel_url": f"https://{share.lan_address(self.cfg)}:{self.cfg.panel_port}",
+                "vpn_ip": vpn_address(),
+            },
             "unprotect_reasons": list(UNPROTECT_REASONS),
             "roles": list(auth.ROLES),
         }
@@ -180,6 +188,16 @@ class AdminApi:
         if "usuarios" in user["permissions"]:
             out["users"] = self._users(conn)
         return out
+
+
+def vpn_address() -> str | None:
+    """IP del equipo en la VPN (Tailscale), si está instalada y conectada."""
+    try:
+        out = subprocess.run(["tailscale", "ip", "-4"], capture_output=True, text=True, timeout=2, check=False)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    ip = out.stdout.strip().splitlines()[0] if out.returncode == 0 and out.stdout.strip() else None
+    return ip
 
 
 def pending_alerts(conn: sqlite3.Connection, limit: int = 20) -> list[sqlite3.Row]:

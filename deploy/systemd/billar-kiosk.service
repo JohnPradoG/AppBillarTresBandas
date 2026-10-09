@@ -20,7 +20,7 @@ StandardError=journal
 UtmpIdentifier=tty1
 UtmpMode=user
 # cage: compositor Wayland mínimo que muestra una sola aplicación a pantalla completa.
-ExecStart=/usr/bin/cage -d -- /opt/billar/bin/billar-navegador
+ExecStart=/usr/bin/cage -d -- /opt/billar/current/bin/billar-navegador
 # Si el navegador se cierra o se cuelga, vuelve a abrirse solo.
 Restart=always
 RestartSec=3

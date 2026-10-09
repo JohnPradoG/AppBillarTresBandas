@@ -47,3 +47,11 @@ role = "principal"
 # Hikvision: /Streaming/Channels/101 · Dahua: /cam/realmonitor?channel=1&subtype=0
 # TP-Link VIGI: /stream1
 url = "rtsp://usuario:CONTRASEÑA@192.168.10.64:554/Streaming/Channels/101"
+
+[panel]
+# Panel de administración desde un computador o celular (HTTPS, entra con PIN).
+# En la red del billar: https://<IP del equipo>:8443. Desde fuera: por la VPN
+# (sudo billar-remoto), nunca abriendo puertos en el router.
+# port = 8443
+# cert = "/var/lib/billar/tls/panel.crt"   # por defecto se crea uno propio
+# key = "/var/lib/billar/tls/panel.key"

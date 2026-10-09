@@ -409,3 +409,5 @@ button:active { transform: scale(0.97); }
 .pin-pad button { height: calc(100 * var(--u)); border-radius: calc(16 * var(--u)); border: 1px solid #3A4744; background: #222D2B; font-size: calc(44 * var(--u)); font-weight: 600; }
 .pin-pad button.go { background: #5B5BEF; border-color: #5B5BEF; color: #FFFFFF; font-size: calc(32 * var(--u)); }
 .pin-pad button.muted { font-size: calc(36 * var(--u)); color: var(--muted); }
+.ad-remote { display: grid; grid-template-columns: auto 1fr auto 1fr; align-items: baseline; gap: calc(8 * var(--u)) calc(16 * var(--u)); border-radius: calc(16 * var(--u)); background: var(--card); border: 1px solid var(--line); padding: calc(18 * var(--u)) calc(24 * var(--u)); font-size: calc(22 * var(--u)); color: var(--muted); }
+.ad-remote b { color: var(--text); font-weight: 600; user-select: text; }

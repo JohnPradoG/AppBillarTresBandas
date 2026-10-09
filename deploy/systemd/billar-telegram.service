@@ -8,7 +8,7 @@ StartLimitIntervalSec=0
 User=billar
 Group=billar
 Environment=BILLAR_CONFIG=/etc/billar/billar.toml
-ExecStart=/opt/billar/venv/bin/billar telegram
+ExecStart=/opt/billar/current/venv/bin/billar telegram
 # Sin bot configurado termina con éxito y no se reinicia.
 Restart=on-failure
 RestartSec=10

@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# Actualiza el programa de la mesa con vuelta atrás automática.
+#
+#   sudo billar-actualizar                 trae lo último de /opt/billar/repo (git pull) y lo activa
+#   sudo billar-actualizar <carpeta>       usa el código de esa carpeta (un repositorio ya descargado)
+#   sudo billar-actualizar --volver        vuelve a la versión anterior
+#   sudo billar-actualizar --lista         muestra las versiones guardadas (* = activa)
+#
+# Cada versión queda en /opt/billar/releases/<fecha>-<commit>. Si después de
+# activar la nueva un servicio no arranca, la pantalla no responde o la
+# grabación no vuelve, se activa sola la versión anterior y llega una alerta.
+set -euo pipefail
+
+PREFIX=/opt/billar
+CONFIG=/etc/billar/billar.toml
+
+if [[ $EUID -ne 0 ]]; then
+  echo "Ejecuta este script con sudo." >&2
+  exit 1
+fi
+
+active_billar() { echo "$PREFIX/current/venv/bin/billar"; }
+
+case "${1:-}" in
+  --volver) exec "$(active_billar)" --config "$CONFIG" update rollback --prefix "$PREFIX" ;;
+  --lista)  exec "$(active_billar)" --config "$CONFIG" update list --prefix "$PREFIX" ;;
+esac
+
+SRC="${1:-$PREFIX/repo}"
+if [[ -z "${1:-}" ]]; then
+  if [[ ! -d "$SRC/.git" ]]; then
+    echo "No hay repositorio en $SRC. Clónalo allí o pasa la carpeta del código." >&2
+    exit 1
+  fi
+  echo "==> Trayendo la última versión ($SRC)"
+  git -C "$SRC" pull --ff-only
+fi
+[[ -f "$SRC/edge/pyproject.toml" ]] || { echo "$SRC no parece el repositorio del billar." >&2; exit 1; }
+
+COMMIT=$(git -C "$SRC" rev-parse --short HEAD 2>/dev/null || echo local)
+NAME="$(date +%Y%m%d-%H%M%S)-$COMMIT"
+DEST="$PREFIX/releases/$NAME"
+
+echo "==> Preparando la versión $NAME"
+install -d "$PREFIX/releases"
+rm -rf "$DEST.tmp"
+install -d "$DEST.tmp"
+cp -r "$SRC/edge" "$DEST.tmp/src"
+install -d "$DEST.tmp/bin"
+install -m 0755 "$SRC/deploy/bin/billar-navegador" "$SRC/deploy/bin/billar-actualizar" "$SRC/deploy/bin/billar-remoto" "$DEST.tmp/bin/"
+# El entorno de Python no se puede mover: se crea ya en su carpeta final.
+mv "$DEST.tmp" "$DEST"
+python3 -m venv "$DEST/venv"
+"$DEST/venv/bin/pip" install -q --no-deps "$DEST/src"
+
+echo "==> Revisando la versión nueva antes de activarla"
+if ! "$DEST/venv/bin/python" -c "import billar_edge.cli, billar_edge.web, billar_edge.recorder, billar_edge.panel" \
+   || ! runuser -u billar -- "$DEST/venv/bin/billar" --config "$CONFIG" check-config; then
+  echo "La versión nueva no pasó la revisión; no se activa. Sigue la actual." >&2
+  rm -rf "$DEST"
+  exit 1
+fi
+ln -sfn "$PREFIX/current/bin/billar-actualizar" /usr/local/sbin/billar-actualizar
+ln -sfn "$PREFIX/current/venv/bin/billar" /usr/local/bin/billar
+ln -sfn "$PREFIX/current/bin/billar-remoto" /usr/local/sbin/billar-remoto
+
+exec "$DEST/venv/bin/billar" --config "$CONFIG" update apply --release "$NAME" --prefix "$PREFIX"

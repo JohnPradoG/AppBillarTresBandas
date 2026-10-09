@@ -22,6 +22,7 @@ let tab = "estado";
 let lastTouchAt = 0;
 let notify = () => {};
 let onChanged = () => {};
+let onExit = () => {};
 
 const time = (ms) => new Date(ms).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 const day = (ms) => new Date(ms).toLocaleDateString("es-CO", { day: "2-digit", month: "2-digit" });
@@ -46,6 +47,7 @@ function button(text, cls, onClick) {
 export function setup(opts) {
   notify = opts.toast;
   onChanged = opts.onChanged;
+  onExit = opts.onExit || onExit;
 }
 
 export function isOpen() {
@@ -113,6 +115,7 @@ function shut() {
   user = null;
   view.hidden = true;
   for (const id of ["pin", "ad-text", "ad-dialog"]) $(id).hidden = true;
+  onExit();
 }
 
 export function exit() {
@@ -279,6 +282,13 @@ function renderEstado() {
     `Se guarda ${data.retention_days} días y se renueva solo cada día.`));
   cards.append(card("Jugadas protegidas", String(data.protected_plays.count),
     `${size(data.protected_plays.bytes)} · se borran solas a los ${data.protected_days} días.`));
+  const remote = el("div", "ad-remote");
+  const port = data.remote.panel_url.split(":").pop();
+  remote.append(
+    el("span", "", "Desde un computador o celular en el WiFi del billar:"), el("b", "", data.remote.panel_url),
+    el("span", "", "Desde fuera del billar (VPN):"),
+    el("b", "", data.remote.vpn_ip ? `https://${data.remote.vpn_ip}:${port}` : "Sin VPN instalada"),
+  );
   const events = el("div", "ad-list");
   events.append(el("h3", "ad-h", "Últimos avisos del sistema"));
   if (!data.events.length) events.append(el("p", "hs-empty", "Sin avisos."));
@@ -287,7 +297,7 @@ function renderEstado() {
     row.append(el("span", "ad-when", `${day(ev.ts)} ${time(ev.ts)}`), el("i", "ad-dot"), el("span", "ad-text", ev.message));
     events.append(row);
   }
-  return [cards, events];
+  return [cards, remote, events];
 }
 
 function choiceRow(title, note, field, choices, unit) {
@@ -333,8 +343,7 @@ function renderAjustes() {
 }
 
 async function renderJugadas() {
-  const res = await fetch("/api/plays?protected=1", { cache: "no-store" });
-  const body = await res.json();
+  const body = await api("GET", "jugadas");
   const list = el("div", "ad-list");
   list.append(el("p", "hint ad-intro", "Quitar la protección borra la copia guardada. Si la grabación todavía existe (7 días) la jugada sigue como repetición normal. Queda en el registro con tu nombre y el motivo."));
   if (!body.plays || !body.plays.length) list.append(el("p", "hs-empty", "No hay jugadas protegidas."));
@@ -500,6 +509,29 @@ keyboard.build($("ad-keyboard"), (ch) => {
   else if (action === "clear") text = "";
   textFresh = false;
   renderText();
+});
+// En el panel desde un computador también sirve el teclado físico.
+document.addEventListener("keydown", (e) => {
+  if (!$("pin").hidden) {
+    if (/^[0-9]$/.test(e.key) && pin.length < 8) { pin += e.key; renderDots(); }
+    else if (e.key === "Backspace") { pin = pin.slice(0, -1); renderDots(); }
+    else if (e.key === "Enter") pinEnter();
+    else if (e.key === "Escape") $("pin").hidden = true;
+    else return;
+  } else if (!$("ad-text").hidden) {
+    if (e.key === "Enter") $("ad-text-ok").click();
+    else if (e.key === "Escape") $("ad-text").hidden = true;
+    else if (e.key === "Backspace") { text = textFresh ? "" : text.slice(0, -1); textFresh = false; renderText(); }
+    else if (e.key === " ") { if (!textFresh && text && !text.endsWith(" ")) text += " "; textFresh = false; renderText(); }
+    else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
+      const base = textFresh ? "" : text;
+      textFresh = false;
+      if (base.length < textDone.max) text = base + e.key;
+      renderText();
+    } else return;
+  } else return;
+  e.preventDefault();
+  lastTouchAt = Date.now();
 });
 $("ad-text-cancel").addEventListener("click", () => { $("ad-text").hidden = true; });
 $("ad-text-ok").addEventListener("click", () => {

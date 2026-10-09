@@ -3,7 +3,7 @@
 Sistema para mesas de billar a tres bandas: grabación continua 24/7, pantalla con retraso, repetición instantánea, historial de 7 días, jugadas protegidas y marcador. Funciona sin Internet. Desarrollado por Vano Systems.
 
 - Arquitectura aprobada: [documento de arquitectura](https://claude.ai/code/artifact/f57a7247-8ce0-4d0f-b59c-47cdc0c712d2)
-- Estado: **Fase 8 (parte 1), administración** (incluye las Fases 1 a 7).
+- Estado: **Fase 8, administración y seguridad** (incluye las Fases 1 a 7).
 
 ## Qué hace la Fase 1
 
@@ -72,7 +72,13 @@ La pantalla táctil muestra la vista Mesa del mockup aprobado: un jugador a cada
 - **Quitar protección** de una jugada guardada: solo administrador, con motivo, borra la copia.
 - **Registro:** todo lo que se hace en administración, con hora y nombre; no se borra desde la pantalla.
 - **Alertas por Telegram (gratis):** con el bot del billar, un QR vincula el celular del dueño. Llegan advertencias y errores (cámara, señal, disco, apagones, PIN bloqueado) y cuando todo vuelve a la normalidad.
-- Parte 2 (pendiente): panel por la red del billar con HTTPS, acceso remoto por VPN y actualizaciones con vuelta atrás.
+
+## Qué hace la Fase 8 (parte 2)
+
+- **Panel desde un computador o celular:** `https://<IP del equipo>:8443`, con el mismo PIN. Proceso aparte (`billar panel`) con certificado propio; solo sirve la administración.
+- **Acceso remoto por VPN, gratis:** `sudo billar-remoto` instala Tailscale. Panel y soporte por la VPN sin abrir puertos en el router.
+- **Actualizaciones con vuelta atrás:** `sudo billar-actualizar` prepara la versión aparte, copia la base, la activa y comprueba servicios, pantalla y grabación. Si algo falla vuelve sola a la anterior y avisa. `--volver` para hacerlo a mano.
+- Detalle en [docs/administracion-remota.md](docs/administracion-remota.md).
 
 ## Estructura
 
@@ -87,12 +93,13 @@ La pantalla táctil muestra la vista Mesa del mockup aprobado: un jugador a cada
 ## Instalar en el mini PC
 
 ```bash
-git clone https://github.com/JohnPradoG/AppBillarTresBandas.git
-cd AppBillarTresBandas
+sudo git clone https://github.com/JohnPradoG/AppBillarTresBandas.git /opt/billar/repo
+cd /opt/billar/repo             # aquí lo busca después `sudo billar-actualizar`
 sudo ./deploy/install.sh        # crea /etc/billar/billar.toml la primera vez
 sudo nano /etc/billar/billar.toml  # URL y contraseña de la cámara
 sudo ./deploy/install.sh        # aplica la configuración y arranca la grabación
 billar --config /etc/billar/billar.toml status
+sudo billar-remoto              # opcional: acceso remoto por VPN (gratis)
 ```
 
 Detalles del disco, la BIOS y la cámara: [docs/instalacion.md](docs/instalacion.md) y [docs/prueba-camara.md](docs/prueba-camara.md).
