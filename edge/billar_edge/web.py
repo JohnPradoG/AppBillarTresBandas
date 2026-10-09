@@ -19,7 +19,7 @@ from pathlib import Path
 from datetime import date
 from urllib.parse import parse_qs, urlparse
 
-from . import __version__, history, plays, replay, settings, statefile
+from . import __version__, games, history, plays, replay, settings, statefile
 from .config import Config
 from .db import connect, ensure_camera, now_ms
 from .health import STALE_STATE_SECONDS
@@ -48,6 +48,7 @@ class App:
         self.cfg = cfg
         # Un guardado a la vez: dos toques seguidos no hacen dos copias.
         self.save_lock = threading.Lock()
+        self.game_lock = threading.Lock()
 
     def state(self) -> dict:
         conn = connect(self.cfg.db_path)
@@ -185,6 +186,39 @@ class App:
             "protected_days": self.cfg.protected_days,
         }
 
+    # ---------- partida ----------
+
+    def _game(self, fn):
+        conn = connect(self.cfg.db_path)
+        try:
+            with self.game_lock:
+                return fn(conn)
+        finally:
+            conn.close()
+
+    def game(self) -> dict:
+        cam = self.cfg.cameras[0].id
+        return self._game(lambda conn: {
+            "game": games.public(games.current(conn, self.cfg, cam)),
+            "recent_players": games.recent_players(conn),
+        })
+
+    def new_game(self, body: dict) -> dict:
+        cam = self.cfg.cameras[0].id
+        row = self._game(lambda conn: games.new(conn, self.cfg, cam, body.get("player1"), body.get("player2")))
+        log.info("Partida #%s: %s contra %s", row["number"], row["player1"], row["player2"])
+        return self.game()
+
+    def save_game(self, game_id: str, body: dict) -> dict:
+        state = body.get("state")
+        if not isinstance(state, dict):
+            raise TypeError("falta el marcador")
+        return self._game(lambda conn: games.public(games.save_state(conn, game_id, state)))
+
+    def rename_players(self, game_id: str, body: dict) -> dict:
+        self._game(lambda conn: games.rename(conn, game_id, body.get("player1"), body.get("player2")))
+        return self.game()
+
     def play_file(self, name: str) -> Path | None:
         if not name.endswith(".mp4") or not SAFE_NAME.match(name):
             return None
@@ -229,6 +263,8 @@ def make_handler(app: App):
                     return self._json(app.history(day))
                 except ValueError as e:
                     return self._json({"error": str(e)}, HTTPStatus.BAD_REQUEST)
+            if path == "/api/game":
+                return self._json(app.game())
             if path == "/api/plays":
                 try:
                     return self._json(app.list_plays(parse_qs(urlparse(self.path).query)))
@@ -260,6 +296,8 @@ def make_handler(app: App):
             path = urlparse(self.path).path
             if path == "/api/plays":
                 return self._save_play()
+            if path == "/api/game":
+                return self._game_call(app.new_game)
             if path != "/api/replay":
                 return self._error(HTTPStatus.NOT_FOUND)
             try:
@@ -278,6 +316,18 @@ def make_handler(app: App):
                 return self._json({"error": str(e)}, HTTPStatus.NOT_FOUND)
             log.info("Repetición de %s armada", clip["moment_ms"])
             return self._json(clip)
+
+        def _game_call(self, fn):
+            try:
+                return self._json(fn(self._body()))
+            except games.StaleGame as e:
+                # Otra pantalla (o una pestaña vieja) cambió de partida: se le
+                # devuelve la vigente para que se ponga al día.
+                return self._json({"error": str(e), **app.game()}, HTTPStatus.CONFLICT)
+            except games.GameError as e:
+                return self._json({"error": str(e)}, HTTPStatus.NOT_FOUND)
+            except (ValueError, KeyError, TypeError, AttributeError) as e:
+                return self._json({"error": str(e)}, HTTPStatus.BAD_REQUEST)
 
         def _save_play(self):
             try:
@@ -300,6 +350,12 @@ def make_handler(app: App):
 
         def do_PUT(self):
             path = urlparse(self.path).path
+            parts = path.split("/")
+            if len(parts) in (4, 5) and parts[1:3] == ["api", "game"] and SAFE_NAME.match(parts[3]):
+                if len(parts) == 4:
+                    return self._game_call(lambda body: app.save_game(parts[3], body))
+                if parts[4] == "players":
+                    return self._game_call(lambda body: app.rename_players(parts[3], body))
             if path != "/api/settings/delay":
                 return self._error(HTTPStatus.NOT_FOUND)
             try:

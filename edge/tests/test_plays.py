@@ -70,7 +70,7 @@ def test_search_filters(cfg, conn):
     assert [r["id"] for r in plays.search(conn, cfg, now, game=3)] == [a]
     assert plays.search(conn, cfg, now, only_protected=True) == []
     opts = plays.options(conn, cfg, now)
-    assert opts["players"] == ["Ana", "Carlos"] and opts["games"] == [4, 3] and len(opts["days"]) >= 1
+    assert opts["players"] == ["Ana", "Carlos"] and [g["number"] for g in opts["games"]] == [4, 3] and len(opts["days"]) >= 1
 
 
 @needs_ffmpeg

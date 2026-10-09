@@ -235,8 +235,8 @@ const PICKERS = {
     filters.hour, (v) => { filters.hour = v; }, "hours"),
   player: () => pick("Jugador en turno", [[null, "Todos"], ...data.options.players.map((n) => [n, n])],
     filters.player, (v) => { filters.player = v; }),
-  game: () => pick("Partida", [[null, "Todas"], ...data.options.games.map((g) => [g, `Partida #${g}`])],
-    filters.game, (v) => { filters.game = v; }),
+  game: () => pick("Partida", [[null, "Todas"], ...data.options.games.map((g) => [g.number, g.player1 ? `#${g.number} · ${g.player1} – ${g.player2}` : `Partida #${g.number}`])],
+    filters.game, (v) => { filters.game = v; }, "wide"),
 };
 
 document.querySelectorAll(".pl-filters [data-filter]").forEach((b) =>

@@ -2,6 +2,7 @@
 import { EDGE_LAG, correction } from "./delay.js";
 import * as history from "./history.js";
 import * as jugadas from "./jugadas.js";
+import * as playersSheet from "./players.js";
 import * as replay from "./replay.js";
 import * as restBalls from "./restballs.js";
 import * as sb from "./scoreboard.js";
@@ -144,6 +145,9 @@ function keepDelay() {
 
 // ---------- marcador ----------
 
+// La partida vive en el equipo (/api/game) para sobrevivir a un reinicio.
+// La pantalla la copia en localStorage para seguir marcando si el servidor
+// tarda, y la vuelve a mandar en cuanto responde.
 function loadGame() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORE_KEY));
@@ -154,6 +158,69 @@ function loadGame() {
 
 function saveGame() {
   try { localStorage.setItem(STORE_KEY, JSON.stringify(game)); } catch { /* sigue en memoria */ }
+}
+
+let recentPlayers = [];
+let pushing = false;
+let localVersion = 0;       // sube con cada toque en el marcador
+
+function adopt(serverGame) {
+  game = { ...serverGame, dirty: false };
+  saveGame();
+  renderScore();
+  renderClocks();
+}
+
+async function pullGame() {
+  const version = localVersion;
+  try {
+    const res = await fetch("/api/game", { cache: "no-store" });
+    const body = await res.json();
+    recentPlayers = body.recent_players;
+    // Se tocó el marcador mientras llegaba la respuesta: vale lo de aquí.
+    if (version !== localVersion && game.id === body.game.id) return;
+    // Si el servidor tiene la misma partida y aquí hay cambios sin mandar, ganan los de aquí.
+    if (game.id === body.game.id && game.dirty) pushGame();
+    else adopt(body.game);
+  } catch { /* se reintenta en el siguiente ciclo */ }
+}
+
+async function pushGame() {
+  if (!game.id) { pullGame(); return; }
+  if (pushing) return;
+  pushing = true;
+  game.dirty = true;
+  saveGame();
+  const sent = JSON.stringify(game);
+  try {
+    const res = await fetch(`/api/game/${game.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ state: game }),
+    });
+    const body = await res.json();
+    if (res.status === 409) {
+      // La partida cambió en otro lado: se toma la vigente.
+      adopt(body.game);
+    } else if (res.ok && JSON.stringify(game) === sent) {
+      game.dirty = false;
+      saveGame();
+    }
+  } catch { /* queda pendiente (dirty) */ }
+  pushing = false;
+  if (game.dirty && JSON.stringify(game) !== sent) pushGame();
+}
+
+async function postGame(path, body, method = "POST") {
+  const res = await fetch(path, {
+    method,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "");
+  recentPlayers = data.recent_players;
+  adopt(data.game);
 }
 
 let game = loadGame();
@@ -172,8 +239,11 @@ function renderScore() {
     const badge = panel.querySelector("[data-badge]");
     const onTurn = game.turn === i;
     panel.classList.toggle("on-turn", onTurn);
-    badge.className = `turn-badge ${onTurn ? "on" : "off"}`;
-    badge.textContent = onTurn ? "EN TURNO" : "Toca tu panel para tomar el turno";
+    // La ayuda "toca tu panel" solo antes del primer toque: luego deja sitio al nombre.
+    const hint = game.turn === null;
+    badge.className = `turn-badge ${onTurn ? "on" : hint ? "off" : "none"}`;
+    badge.textContent = onTurn ? "EN TURNO" : hint ? "Toca tu panel para tomar el turno" : "";
+    panel.querySelector("[data-name]").classList.toggle("long", p.name.length > 12);
   });
   $("innings").textContent = sb.innings(game);
 }
@@ -191,7 +261,9 @@ function renderClocks() {
 
 function update(fn) {
   fn(Date.now());
+  localVersion++;
   saveGame();
+  pushGame();
   renderScore();
   renderClocks();
 }
@@ -249,13 +321,29 @@ function toast(text) {
 
 $("menu-btn").addEventListener("click", () => { renderDelayChoices(); $("menu").hidden = false; });
 $("menu-close").addEventListener("click", () => { $("menu").hidden = true; });
-$("new-game").addEventListener("click", () => { $("menu").hidden = true; $("confirm").hidden = false; });
-$("confirm-no").addEventListener("click", () => { $("confirm").hidden = true; });
-$("confirm-yes").addEventListener("click", () => {
-  $("confirm").hidden = true;
-  game = sb.newGame((game.number || 1) + 1);
-  update(() => {});
-});
+function openPlayers(mode) {
+  $("menu").hidden = true;
+  playersSheet.open({
+    mode,
+    current: game.players.map((p) => p.name),
+    recent: recentPlayers,
+    onDone: async ([player1, player2]) => {
+      try {
+        if (mode === "new") {
+          await postGame("/api/game", { player1, player2 });
+          toast(`Partida #${game.number}: ${player1} contra ${player2}`);
+        } else {
+          await postGame(`/api/game/${game.id}/players`, { player1, player2 }, "PUT");
+          toast("Nombres cambiados");
+        }
+      } catch (e) {
+        toast(`No se pudo guardar la partida. ${e.message}`);
+      }
+    },
+  });
+}
+$("new-game").addEventListener("click", () => openPlayers("new"));
+$("rename-players").addEventListener("click", () => openPlayers("rename"));
 // El momento de una jugada es la imagen que se estaba viendo (hora − retraso real).
 function shownMoment() {
   const lat = hls && Number.isFinite(hls.latency) && video.readyState >= 2 ? hls.latency + EDGE_LAG : target;
@@ -265,6 +353,7 @@ function shownMoment() {
 // Datos del marcador que quedan con la jugada.
 function gameMeta() {
   return {
+    game_id: game.id || null,
     game_number: game.number || 1,
     turn_player: game.turn === null ? null : game.players[game.turn].name,
     player1: game.players[0].name,
@@ -344,7 +433,7 @@ function enterRest() {
   resting = true;
   $("rest").hidden = false;
   $("menu").hidden = true;
-  $("confirm").hidden = true;
+  playersSheet.close();
   restMovedAt = 0;
   renderRest();
   restBalls.start($("rest-balls"));
@@ -398,7 +487,9 @@ document.addEventListener("click", (e) => {
 renderScore();
 renderClocks();
 refreshState();
+pullGame();
 setInterval(refreshState, 2000);
+setInterval(() => { if (game.dirty) pushGame(); else pullGame(); }, 10000);
 setInterval(keepDelay, 500);
 setInterval(renderClocks, 250);
 setInterval(checkRest, 1000);

@@ -111,18 +111,30 @@
     <button class="wide" id="open-plays">Jugadas (repeticiones y guardadas)</button>
     <button class="wide" id="open-history">Historial de los últimos días</button>
     <h3>Partida</h3>
-    <button class="wide" id="new-game">Nueva partida</button>
+    <div class="confirm-row">
+      <button class="wide" id="new-game">Nueva partida</button>
+      <button class="wide" id="rename-players">Cambiar nombres</button>
+    </div>
     <button class="wide close" id="menu-close">Cerrar</button>
   </div>
 </div>
 
-<div class="sheet" id="confirm" hidden>
-  <div class="sheet-card" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
-    <h2 id="confirm-title">¿Empezar una partida nueva?</h2>
-    <p class="hint">El marcador vuelve a cero.</p>
+<div class="sheet" id="players" hidden>
+  <div class="sheet-card players-card" role="dialog" aria-modal="true" aria-labelledby="pl-sheet-title">
+    <h2 id="pl-sheet-title">Nueva partida</h2>
+    <p class="hint" id="pl-sheet-hint"></p>
+    <div class="pl-slots">
+      <button class="pl-slot" id="pl-slot-0"><span class="ball white"></span><span class="pl-slot-text"><span class="caption">Bola blanca</span><span data-value></span></span></button>
+      <button class="pl-slot" id="pl-slot-1"><span class="ball yellow"></span><span class="pl-slot-text"><span class="caption">Bola amarilla</span><span data-value></span></span></button>
+    </div>
+    <div id="pl-recent-wrap">
+      <h3>Jugadores recientes</h3>
+      <div class="pl-recent" id="pl-recent"></div>
+    </div>
+    <div class="keyboard" id="pl-keyboard"></div>
     <div class="confirm-row">
-      <button class="wide" id="confirm-no">No</button>
-      <button class="wide danger" id="confirm-yes">Sí, nueva partida</button>
+      <button class="wide" id="pl-sheet-cancel">Cancelar</button>
+      <button class="wide go" id="pl-sheet-ok">Empezar partida</button>
     </div>
   </div>
 </div>

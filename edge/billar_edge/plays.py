@@ -39,6 +39,8 @@ def clean_meta(meta: dict | None) -> dict:
     for k in TEXT_FIELDS:
         v = meta.get(k)
         out[k] = str(v)[:60] if v not in (None, "") else None
+    gid = meta.get("game_id")
+    out["game_id"] = str(gid)[:40] if gid else None
     for k in INT_FIELDS:
         try:
             out[k] = int(meta[k]) if meta.get(k) is not None else None
@@ -52,14 +54,16 @@ def record(conn: sqlite3.Connection, cfg: Config, camera_id: str, moment_ms: int
     if source not in SOURCES:
         raise PlayError(f"Origen no válido: {source}")
     meta = clean_meta(meta)
+    if meta["game_id"] and not conn.execute("SELECT 1 FROM games WHERE id = ?", (meta["game_id"],)).fetchone():
+        meta["game_id"] = None
     play_id = uuid7()
     conn.execute(
         """INSERT INTO plays (id, camera_id, table_number, moment_ms, start_ms, end_ms, source,
-               game_number, turn_player, player1, player2, score1, score2, innings, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+               game_number, turn_player, player1, player2, score1, score2, innings, created_at, game_id)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (play_id, camera_id, cfg.camera(camera_id).table_number, moment_ms, start_ms, end_ms, source,
          meta["game_number"], meta["turn_player"], meta["player1"], meta["player2"],
-         meta["score1"], meta["score2"], meta["innings"], now_ms()),
+         meta["score1"], meta["score2"], meta["innings"], now_ms(), meta["game_id"]),
     )
     return play_id
 
@@ -173,8 +177,9 @@ def options(conn: sqlite3.Connection, cfg: Config, now: int) -> dict:
     where = "WHERE protected_at IS NOT NULL OR start_ms > ?"
     players = [r[0] for r in conn.execute(
         f"SELECT DISTINCT turn_player FROM plays {where} ORDER BY turn_player", (since,)) if r[0]]
-    games = [r[0] for r in conn.execute(
-        f"SELECT DISTINCT game_number FROM plays {where} ORDER BY game_number DESC", (since,)) if r[0] is not None]
+    games = [{"number": r[0], "player1": r[1], "player2": r[2]} for r in conn.execute(
+        f"""SELECT game_number, MAX(player1), MAX(player2) FROM plays {where}
+            GROUP BY game_number ORDER BY game_number DESC""", (since,)) if r[0] is not None]
     days = sorted({datetime.fromtimestamp(r[0] / 1000).date().isoformat() for r in conn.execute(
         f"SELECT moment_ms FROM plays {where}", (since,))}, reverse=True)
     return {"players": players, "games": games, "days": days}
