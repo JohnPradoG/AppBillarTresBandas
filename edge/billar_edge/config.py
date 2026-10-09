@@ -8,6 +8,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 DEFAULT_CONFIG_PATH = "/etc/billar/billar.toml"
+# Contacto de Vano Systems para el modo reposo (publicidad de quien hizo el sistema).
+VANO_CONTACT = "WhatsApp +56 9 7331 4909 · vanosystems.com"
 
 
 @dataclass(frozen=True)
@@ -52,13 +54,13 @@ class Config:
     # Minutos sin tocar la pantalla antes del modo reposo (la grabación sigue).
     idle_minutes: int = 20
     # Contacto de Vano Systems que se muestra en el modo reposo (vacío = no se muestra).
-    brand_contact: str = ""
+    brand_contact: str = VANO_CONTACT
     # Compartir (Fase 7): enlaces para el celular en la red del billar y bot
     # de Telegram opcional.
     share_port: int = 8081
     share_address: str = ""          # IP o nombre del equipo en el WiFi; vacío = se detecta
     share_hours: int = 24            # lo que dura un enlace
-    share_logo: Path | None = None   # PNG con el logo de Vano Systems para la marca de agua
+    share_logo: Path | None = None   # otro PNG para la marca de agua (por defecto, el logo de Vano Systems)
     telegram_token: str = ""
     telegram_bot: str = ""           # nombre del bot, sin @
     cameras: tuple[CameraConfig, ...] = field(default_factory=tuple)
@@ -136,7 +138,7 @@ def load(path: str | os.PathLike | None = None) -> Config:
         ui_host=ui.get("host", "127.0.0.1"),
         ui_port=int(ui.get("port", 8080)),
         idle_minutes=int(ui.get("idle_minutes", 20)),
-        brand_contact=str(ui.get("brand_contact", "")),
+        brand_contact=str(ui.get("brand_contact", VANO_CONTACT)),
         share_port=int(share.get("port", 8081)),
         share_address=str(share.get("address", "")),
         share_hours=int(share.get("link_hours", 24)),

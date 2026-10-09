@@ -27,7 +27,7 @@ no_signal_seconds = 30        # imagen negra o congelada => SIN SEÑAL
 host = "127.0.0.1"            # la pantalla solo se sirve al propio equipo
 port = 8080
 idle_minutes = 20          # minutos sin tocar la pantalla antes del modo reposo
-# brand_contact = "WhatsApp 300 000 0000"  # contacto de Vano Systems en el modo reposo
+# brand_contact = ""   # contacto en el modo reposo; por defecto el de Vano Systems, "" lo oculta
 
 [share]
 # Compartir jugadas. El celular del cliente, conectado al WiFi del billar,
@@ -35,7 +35,7 @@ idle_minutes = 20          # minutos sin tocar la pantalla antes del modo reposo
 port = 8081                # solo sirve los videos compartidos (abrir en el firewall de la red local)
 # address = "192.168.1.50" # IP del equipo en el WiFi; vacío = se detecta sola
 link_hours = 24            # cuánto dura cada enlace
-# logo = "/etc/billar/logo-vano.png"   # logo para la marca de agua (PNG con transparencia)
+# logo = "/etc/billar/otro-logo.png"   # cambia el logo de la marca de agua (por defecto, el de Vano Systems)
 # Telegram (opcional, gratis): crear un bot con @BotFather y poner aquí su token y nombre.
 # telegram_token = "123456:ABC..."
 # telegram_bot = "BillarXYZBot"

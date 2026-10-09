@@ -57,7 +57,7 @@ La pantalla táctil muestra la vista Mesa del mockup aprobado: un jugador a cada
 
 ## Qué hace la Fase 7
 
-- **COMPARTIR** en la repetición y en cada fila de JUGADAS. Prepara un video liviano (720p, 30 cps, unos 5–14 MB) con la marca de agua: billar, mesa, fecha, jugadores y marcador arriba; VANO SYSTEMS (y el logo, con `[share] logo`) abajo.
+- **COMPARTIR** en la repetición y en cada fila de JUGADAS. Prepara un video liviano (720p, 30 cps, unos 5–14 MB) con la marca de agua: billar, mesa, fecha, jugadores y marcador arriba; VANO SYSTEMS y su logo abajo a la derecha (`[share] logo` lo cambia).
 - **WhatsApp sin costo:** la pantalla muestra un QR. El celular conectado al WiFi del billar abre el enlace, descarga el video y lo comparte desde la galería. Lo sirve `billar share-server` (puerto 8081), un proceso aparte que solo conoce estos videos; la pantalla y su API siguen en 127.0.0.1.
 - **Telegram (opcional, gratis):** con un bot creado en @BotFather (`[share] telegram_token` y `telegram_bot`), un segundo QR abre el bot y le manda el video al cliente. Necesita Internet; lo demás no.
 - Los enlaces duran 24 horas (`link_hours`) y la limpieza borra sus videos.

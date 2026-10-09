@@ -40,6 +40,9 @@ log = logging.getLogger("billar.share")
 FONTS = Path(__file__).parent / "assets" / "fonts"
 FONT_BOLD = FONTS / "barlow-condensed-latin-700-normal.woff"
 FONT_SEMI = FONTS / "barlow-condensed-latin-600-normal.woff"
+# Logo de Vano Systems (V blanca con barra morada); [share] logo lo reemplaza.
+LOGO = Path(__file__).parent / "assets" / "vano-logo.png"
+LOGO_SVG = (Path(__file__).parent / "assets" / "vano-logo.svg").read_text(encoding="utf-8")
 TOKEN = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
 HOUR_MS = 3_600_000
 RENDER_TIMEOUT = 240
@@ -73,14 +76,21 @@ def render_command(cfg: Config, src: Path, out: Path, text_files: tuple[Path, Pa
         f"drawbox=x=0:y=0:w=iw:h=104:color=black@0.45:t=fill",
         f"drawtext=fontfile='{_esc(FONT_BOLD)}':textfile='{_esc(top)}':{common}:fontsize=38:x=28:y=16",
         f"drawtext=fontfile='{_esc(FONT_SEMI)}':textfile='{_esc(bottom)}':{common}:fontsize=28:x=28:y=62",
-        f"drawtext=fontfile='{_esc(FONT_BOLD)}':textfile='{_esc(brand)}':expansion=none:fontcolor=0xF0D57A@0.92"
-        ":shadowcolor=black@0.7:shadowx=2:shadowy=2:fontsize=44:x=w-tw-28:y=h-th-24",
     ]
+    logo = cfg.share_logo or LOGO
+    has_logo = logo.exists()
+    # Abajo a la derecha: "VANO SYSTEMS" y, pegado a su derecha, el logo (64 px de alto).
+    brand_x = "w-tw-110" if has_logo else "w-tw-28"
+    # Fondo oscuro para que la marca se lea sobre cualquier imagen (el texto es fijo).
+    box_w = 360 if has_logo else 280
+    filters.append(f"drawbox=x=iw-{box_w}-12:y=ih-102:w={box_w}:h=90:color=0x0B1120@0.55:t=fill")
+    filters.append(f"drawtext=fontfile='{_esc(FONT_BOLD)}':textfile='{_esc(brand)}':expansion=none:fontcolor=white@0.95"
+                   f":shadowcolor=black@0.7:shadowx=2:shadowy=2:fontsize=44:x={brand_x}:y=h-th-30")
     cmd = [cfg.ffmpeg, "-hide_banner", "-nostdin", "-loglevel", "error", "-y", "-i", str(src)]
-    if cfg.share_logo and cfg.share_logo.exists():
-        cmd += ["-i", str(cfg.share_logo)]
-        graph = (f"[0:v]{','.join(filters)}[base];[1:v]scale=-1:72[logo];"
-                 "[base][logo]overlay=x=W-w-28:y=H-h-80[v]")
+    if has_logo:
+        cmd += ["-i", str(logo)]
+        graph = (f"[0:v]{','.join(filters)}[base];[1:v]scale=-1:64[logo];"
+                 "[base][logo]overlay=x=W-w-28:y=H-h-24[v]")
     else:
         graph = f"[0:v]{','.join(filters)}[v]"
     return cmd + [
@@ -211,11 +221,16 @@ p {{ color: #9AA5A1; margin: 6px 0 16px; line-height: 1.4; }}
 video {{ width: 100%; border-radius: 12px; background: #000; }}
 a.btn {{ display: block; margin: 18px 0 10px; padding: 16px; border-radius: 12px; background: #1E8A55; color: #fff;
   font-size: 19px; font-weight: 700; text-decoration: none; }}
-.brand {{ margin-top: 28px; color: #F0D57A; letter-spacing: 4px; font-weight: 700; }}
+.brand {{ margin-top: 32px; display: flex; align-items: center; justify-content: center; gap: 12px; }}
+.brand svg {{ width: 38px; height: 36px; }}
+.brand b {{ display: block; text-align: left; font-size: 20px; letter-spacing: 3px; }}
+.brand span {{ display: block; text-align: left; font-size: 13px; color: #9AA5A1; }}
+.brand a {{ color: #8C8CF5; }}
 </style></head>
 <body><main>
 {body}
-<div class="brand">VANO SYSTEMS</div>
+<div class="brand">{logo}<div><b>VANO SYSTEMS</b>
+<span>Hecho por Vano Systems · <a href="https://www.vanosystems.com">vanosystems.com</a></span></div></div>
 </main></body></html>"""
 
 
@@ -223,7 +238,7 @@ def page_for(cfg: Config, row: sqlite3.Row | None, play: sqlite3.Row | None, nam
     if row is None or play is None:
         body = ("<h1>Este enlace ya venció</h1>"
                 "<p>Pide en la pantalla de la mesa que vuelvan a compartir la jugada.</p>")
-        return PAGE.format(title="Enlace vencido", body=body)
+        return PAGE.format(logo=LOGO_SVG, title="Enlace vencido", body=body)
     top, bottom = caption_lines(cfg, play, name)
     until = datetime.fromtimestamp(row["expires_at"] / 1000).strftime("%d/%m/%Y %H:%M")
     mp4 = f"/c/{row['token']}.mp4"
@@ -235,7 +250,7 @@ def page_for(cfg: Config, row: sqlite3.Row | None, play: sqlite3.Row | None, nam
         "<p>Después ábrelo en tu galería y compártelo por WhatsApp.<br>"
         f"El enlace funciona hasta el {until}.</p>"
     )
-    return PAGE.format(title=html.escape(top), body=body)
+    return PAGE.format(logo=LOGO_SVG, title=html.escape(top), body=body)
 
 
 def make_share_handler(cfg: Config):

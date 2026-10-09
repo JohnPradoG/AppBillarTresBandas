@@ -137,18 +137,22 @@ button:active { transform: scale(0.97); }
 .rest { position: fixed; inset: 0; z-index: 30; overflow: hidden; background: radial-gradient(ellipse at 50% 45%, #0F4A33 0%, #0A2E21 55%, #05140F 100%); }
 .rest[hidden] { display: none; }
 .rest-balls { position: absolute; inset: 0; width: 100%; height: 100%; }
-.rest-card { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: calc(14 * var(--u)); text-align: center; padding: calc(48 * var(--u)) calc(72 * var(--u)); border-radius: calc(32 * var(--u)); background: rgba(5,12,10,0.72); border: 1px solid rgba(240,213,122,0.35); box-shadow: 0 0 calc(80 * var(--u)) rgba(0,0,0,0.6); backdrop-filter: blur(6px); transition: left 3s ease, top 3s ease; max-width: calc(1700 * var(--u)); }
+.rest-card { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: calc(14 * var(--u)); text-align: center; padding: calc(48 * var(--u)) calc(72 * var(--u)); border-radius: calc(32 * var(--u)); background: rgba(5,12,10,0.72); border: 1px solid rgba(91,91,239,0.45); box-shadow: 0 0 calc(80 * var(--u)) rgba(0,0,0,0.6); backdrop-filter: blur(6px); transition: left 3s ease, top 3s ease; max-width: calc(1700 * var(--u)); }
 .rest-place { font-family: var(--cond); font-weight: 700; font-size: calc(96 * var(--u)); line-height: 1; letter-spacing: 1px; }
 .rest-table { font-size: calc(34 * var(--u)); color: #CFE3D8; font-weight: 500; }
 .rest-table #rest-time { font-family: var(--cond); font-weight: 700; }
-.rest-line { width: calc(240 * var(--u)); height: 2px; margin: calc(14 * var(--u)) 0; background: linear-gradient(90deg, transparent, var(--gold), transparent); }
+.rest-line { width: calc(240 * var(--u)); height: 2px; margin: calc(14 * var(--u)) 0; background: linear-gradient(90deg, transparent, #5B5BEF, transparent); }
 .rest-by { font-size: calc(24 * var(--u)); color: var(--muted); letter-spacing: calc(4 * var(--u)); text-transform: uppercase; }
-.rest-brand { font-family: var(--cond); font-weight: 700; font-size: calc(150 * var(--u)); line-height: 1; letter-spacing: calc(12 * var(--u)); padding-left: calc(12 * var(--u)); white-space: nowrap;
-  background: linear-gradient(100deg, #B8892A 0%, #F0D57A 30%, #FFF6D6 45%, #F0D57A 60%, #B8892A 100%); background-size: 250% 100%;
-  -webkit-background-clip: text; background-clip: text; color: transparent; animation: shine 6s linear infinite; filter: drop-shadow(0 0 calc(24 * var(--u)) rgba(233,195,65,0.35)); }
+.rest-logo { display: flex; align-items: center; gap: calc(36 * var(--u)); filter: drop-shadow(0 0 calc(18 * var(--u)) rgba(91,91,239,0.3)); }
+.rest-logo img { height: calc(170 * var(--u)); width: auto; }
+.rest-brand { display: flex; flex-direction: column; align-items: flex-start; }
+.rest-vano { font-family: var(--cond); font-weight: 700; font-size: calc(150 * var(--u)); line-height: 0.9; letter-spacing: calc(6 * var(--u));
+  background: linear-gradient(100deg, #FFFFFF 0%, #FFFFFF 35%, #B9B9FF 47%, #FFFFFF 59%, #FFFFFF 100%); background-size: 250% 100%;
+  -webkit-background-clip: text; background-clip: text; color: transparent; animation: shine 6s linear infinite; }
+.rest-systems { font-size: calc(40 * var(--u)); font-weight: 600; letter-spacing: calc(22 * var(--u)); color: #A9AECB; margin-top: calc(8 * var(--u)); }
 @keyframes shine { from { background-position: 100% 0; } to { background-position: -150% 0; } }
 .rest-tag { font-size: calc(28 * var(--u)); color: #E7EDE9; white-space: nowrap; }
-.rest-contact { margin-top: calc(6 * var(--u)); padding: calc(10 * var(--u)) calc(26 * var(--u)); border-radius: 999px; background: rgba(233,195,65,0.14); border: 1px solid var(--gold); color: var(--gold-text); font-size: calc(28 * var(--u)); font-weight: 600; }
+.rest-contact { margin-top: calc(6 * var(--u)); padding: calc(10 * var(--u)) calc(26 * var(--u)); border-radius: 999px; background: rgba(91,91,239,0.22); border: 1px solid #5B5BEF; color: #FFFFFF; white-space: nowrap; font-size: calc(28 * var(--u)); font-weight: 600; }
 .rest-contact[hidden] { display: none; }
 .rest-hint { margin-top: calc(18 * var(--u)); font-size: calc(26 * var(--u)); color: #CFE3D8; animation: pulse 2.4s ease-in-out infinite; }
 @keyframes pulse { 50% { opacity: 0.35; } }
