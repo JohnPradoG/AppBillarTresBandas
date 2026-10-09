@@ -46,7 +46,7 @@ La pantalla táctil muestra la vista Mesa del mockup aprobado: un jugador a cada
 ## Qué hace la Fase 5
 
 - **GUARDAR JUGADA** en la partida, en la repetición y en el historial. Desde la partida guarda 30 s antes y 15 s después de lo que se ve en pantalla; desde la repetición, esa misma repetición; desde el historial, el tramo que se está viendo.
-- La jugada guardada es una copia propia en `<recordings_dir>/jugadas/AAAA-MM/`, de solo lectura y con su huella SHA-256, con el marcador, el jugador en turno y el número de partida. La limpieza de 7 días nunca la toca. `billar verify-plays` revisa que ninguna falte o haya cambiado.
+- La jugada guardada es una copia propia en `<recordings_dir>/jugadas/AAAA-MM/`, de solo lectura y con su huella SHA-256, con el marcador, el jugador en turno y el número de partida. Dura 30 días (`protected_days`, decidido por John) y luego la limpieza diaria la borra, para que el disco se renueve solo. `billar verify-plays` revisa que ninguna falte o haya cambiado.
 - Sección **JUGADAS** (menú): cada REPETICIÓN queda en la lista mientras exista su grabación (7 días) y se puede proteger desde ahí. Filtros por fecha, hora, jugador, partida y solo protegidas; acceso directo al historial. Avisa cuando las jugadas guardadas pasan de `protected_quota_gb` (100 GB por defecto).
 - Compartir por WhatsApp y Telegram llega en la Fase 7; los nombres de los jugadores y las partidas en la base de datos, en la Fase 6.
 

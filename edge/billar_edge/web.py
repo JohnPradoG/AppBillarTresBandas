@@ -182,6 +182,7 @@ class App:
             "usage_bytes": plays.usage_bytes(self.cfg),
             "quota_bytes": int(self.cfg.protected_quota_gb * 1024 ** 3),
             "now_ms": now,
+            "protected_days": self.cfg.protected_days,
         }
 
     def play_file(self, name: str) -> Path | None:

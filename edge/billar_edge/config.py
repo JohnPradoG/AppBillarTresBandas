@@ -39,6 +39,8 @@ class Config:
     # ocupan más de este espacio.
     protected_dir: Path | None = None
     protected_quota_gb: float = 100.0
+    # Días que dura una jugada guardada antes de borrarse sola (0 = nunca).
+    protected_days: int = 30
     # Exigir que la carpeta de video sea un disco o partición montada, para no
     # llenar el disco del sistema si el disco de video falta.
     require_mount: bool = False
@@ -115,6 +117,7 @@ def load(path: str | os.PathLike | None = None) -> Config:
         require_mount=bool(storage.get("require_mount", False)),
         protected_dir=Path(storage["protected_dir"]) if storage.get("protected_dir") else None,
         protected_quota_gb=float(storage.get("protected_quota_gb", 100)),
+        protected_days=int(storage.get("protected_days", 30)),
         ffmpeg=recorder.get("ffmpeg", "ffmpeg"),
         ffprobe=recorder.get("ffprobe", "ffprobe"),
         ui_host=ui.get("host", "127.0.0.1"),

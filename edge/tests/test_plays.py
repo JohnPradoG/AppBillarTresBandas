@@ -1,5 +1,6 @@
 """Fase 5: GUARDAR JUGADA y la sección JUGADAS."""
 
+import dataclasses
 import json
 import os
 import stat
@@ -56,7 +57,7 @@ def test_unprotected_plays_hide_with_the_recording(cfg, conn):
     assert plays.search(conn, cfg, now) == []
     conn.execute("UPDATE plays SET protected_at = 1, path = '/x' WHERE id = ?", (old,))
     [row] = plays.search(conn, cfg, now)
-    assert row["protected"] and row["expires_ms"] is None and "path" not in row
+    assert row["protected"] and row["expires_ms"] == 1 + cfg.protected_days * DAY_MS and "path" not in row
 
 
 def test_search_filters(cfg, conn):
@@ -144,3 +145,20 @@ def test_play_files_outside_the_plays_folder_are_not_served(cfg, conn, server, t
     with pytest.raises(urllib.error.HTTPError) as e:
         urllib.request.urlopen(f"{server}/jugada/{a}.mp4", timeout=5)
     assert e.value.code == 404
+
+
+def test_saved_plays_expire_after_protected_days(cfg, conn):
+    cfg.plays_dir.mkdir(parents=True)
+    old, new = (plays.record(conn, cfg, "mesa1", T0, T0, T0 + 1, "pantalla") for _ in range(2))
+    for pid, at in ((old, T0), (new, T0 + 20 * DAY_MS)):
+        f = cfg.plays_dir / f"{pid}.mp4"
+        f.write_bytes(b"x" * 10)
+        f.chmod(0o444)
+        conn.execute("UPDATE plays SET protected_at = ?, path = ? WHERE id = ?", (at, str(f), pid))
+    from billar_edge import retention
+    retention.run(conn, cfg, now=T0 + 31 * DAY_MS, free_pct=lambda _: 50.0)
+    assert plays.get(conn, old) is None and not (cfg.plays_dir / f"{old}.mp4").exists()
+    assert plays.get(conn, new) is not None and (cfg.plays_dir / f"{new}.mp4").exists()
+    # Con 0 días no se borran nunca.
+    never = dataclasses.replace(cfg, protected_days=0)
+    assert plays.expire(conn, never, T0 + 999 * DAY_MS) == (0, 0)

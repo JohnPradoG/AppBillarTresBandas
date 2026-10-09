@@ -115,7 +115,8 @@ function renderRows() {
     const state = document.createElement("span");
     if (p.protected) {
       state.className = "pl-saved";
-      state.innerHTML = `${LOCK}<span>Protegida</span>`;
+      state.innerHTML = `${LOCK}<span></span>`;
+      state.lastChild.textContent = p.expires_ms ? `Protegida hasta el ${shortDay(p.expires_ms)}` : "Protegida";
     } else {
       state.className = "pl-note";
       state.textContent = `Se borra el ${shortDay(p.expires_ms)}`;
@@ -166,7 +167,8 @@ function renderFoot() {
   foot.classList.toggle("warn", over);
   foot.textContent = `Las jugadas protegidas ocupan ${size(data.usage_bytes)} de ${size(data.quota_bytes)} previstos.`
     + (over ? " Conviene copiarlas y borrar las que ya no se necesiten." : "")
-    + " Las demás se borran solas con la grabación a los 7 días.";
+    + (data.protected_days > 0 ? ` Se borran solas a los ${data.protected_days} días;` : "")
+    + " las demás, con la grabación a los 7 días.";
 }
 
 async function protect(p, button) {

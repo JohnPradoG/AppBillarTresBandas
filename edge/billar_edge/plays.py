@@ -2,8 +2,10 @@
 
 Una jugada anotada solo apunta a la grabación, así que desaparece con ella a
 los 7 días. Al protegerla se hace una copia propia del clip en la carpeta de
-jugadas (fuera de la limpieza), de solo lectura y con su huella SHA-256, junto
-con el marcador, el turno y la partida de ese momento.
+jugadas, de solo lectura y con su huella SHA-256, junto con el marcador, el
+turno y la partida de ese momento. Esa copia dura `protected_days` (30 por
+defecto) y luego la limpieza diaria la borra, para que el disco se renueve
+solo; con 0 no se borra nunca.
 """
 
 from __future__ import annotations
@@ -19,7 +21,7 @@ from .config import Config
 from .db import now_ms
 from .ids import uuid7
 from .media import probe_fps, sha256_file
-from .retention import DAY_MS
+DAY_MS = 86_400_000
 
 SOURCES = ("repeticion", "pantalla", "historial")
 TEXT_FIELDS = ("turn_player", "player1", "player2")
@@ -146,7 +148,10 @@ def public(row, cfg: Config) -> dict:
     """La jugada como la ve la pantalla (sin la ruta del archivo)."""
     r = dict(row)
     r["protected"] = r["protected_at"] is not None
-    r["expires_ms"] = None if r["protected"] else r["start_ms"] + cfg.retention_days * DAY_MS
+    if r["protected"]:
+        r["expires_ms"] = r["protected_at"] + cfg.protected_days * DAY_MS if cfg.protected_days > 0 else None
+    else:
+        r["expires_ms"] = r["start_ms"] + cfg.retention_days * DAY_MS
     r["url"] = f"/jugada/{r['id']}.mp4" if r["protected"] else None
     r.pop("path", None)
     return r
@@ -173,6 +178,25 @@ def options(conn: sqlite3.Connection, cfg: Config, now: int) -> dict:
     days = sorted({datetime.fromtimestamp(r[0] / 1000).date().isoformat() for r in conn.execute(
         f"SELECT moment_ms FROM plays {where}", (since,))}, reverse=True)
     return {"players": players, "games": games, "days": days}
+
+
+def expire(conn: sqlite3.Connection, cfg: Config, now: int) -> tuple[int, int]:
+    """Borra las jugadas guardadas de más de `protected_days` días."""
+    if cfg.protected_days <= 0:
+        return 0, 0
+    rows = conn.execute("SELECT id, path FROM plays WHERE protected_at IS NOT NULL AND protected_at < ?",
+                        (now - cfg.protected_days * DAY_MS,)).fetchall()
+    freed = 0
+    for r in rows:
+        path = Path(r["path"]) if r["path"] else None
+        if path is not None and path.resolve().is_relative_to(cfg.plays_dir.resolve()):
+            try:
+                freed += path.stat().st_size
+                path.unlink()
+            except FileNotFoundError:
+                pass
+        conn.execute("DELETE FROM plays WHERE id = ?", (r["id"],))
+    return len(rows), freed
 
 
 def usage_bytes(cfg: Config) -> int:

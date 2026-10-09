@@ -1,6 +1,7 @@
 """Limpieza automática: historial circular de N días.
 
-Nunca borra segmentos protegidos (protected_refs > 0). Si el disco llega al
+Nunca borra segmentos protegidos (protected_refs > 0). Las jugadas guardadas
+se borran a los `protected_days` días (plays.expire). Si el disco llega al
 umbral crítico, borra los segmentos normales más antiguos aunque tengan menos
 de N días, para que la grabación nunca se detenga por falta de espacio.
 """
@@ -12,7 +13,7 @@ import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
 
-from . import events
+from . import events, plays
 from .config import Config
 from .db import now_ms
 
@@ -55,6 +56,11 @@ def run(conn: sqlite3.Connection, cfg: Config, now: int | None = None, free_pct=
     for row in expired:
         result.freed_bytes += _delete(conn, row)
         result.deleted_expired += 1
+    count, freed = plays.expire(conn, cfg, now)
+    if count:
+        events.record(conn, "info", events.RETENTION,
+                      f"Limpieza automática: {count} jugadas guardadas de más de {cfg.protected_days} días borradas",
+                      data={"bytes": freed})
     if result.deleted_expired:
         events.record(conn, "info", events.RETENTION,
                       f"Limpieza automática: {result.deleted_expired} segmentos de más de {cfg.retention_days} días borrados",
