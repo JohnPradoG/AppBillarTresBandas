@@ -48,3 +48,8 @@ test("carambolas, serie mayor, entradas y promedio", () => {
   sb.subtract(g, 1, 0); sb.subtract(g, 1, 0); sb.subtract(g, 1, 0);
   assert.equal(g.players[1].score, 0);  // nunca negativo
 });
+
+test("cada partida nueva lleva su número, que queda con las jugadas guardadas", () => {
+  assert.equal(sb.newGame().number, 1);
+  assert.equal(sb.newGame(4).number, 4);
+});

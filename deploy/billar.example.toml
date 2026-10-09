@@ -12,6 +12,10 @@ retention_days = 7
 require_mount = true          # no grabar si la partición de video no está montada
 warn_free_percent = 15        # advertencia de almacenamiento
 critical_free_percent = 5     # se borran segmentos antiguos antes de tiempo
+# Jugadas guardadas (GUARDAR JUGADA): copias que la limpieza nunca borra.
+# Por defecto en <recordings_dir>/jugadas, en el mismo disco de video.
+# protected_dir = "/srv/billar/video/jugadas"
+protected_quota_gb = 100      # aviso cuando las jugadas guardadas ocupan más
 
 [recorder]
 segment_seconds = 60          # segmentos de 1 minuto alineados al reloj

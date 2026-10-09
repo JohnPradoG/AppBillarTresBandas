@@ -5,8 +5,10 @@
 
 export const SHOT_SECONDS = 40;
 
-export function newGame() {
+// number: número de la partida en esta mesa; queda con cada jugada guardada.
+export function newGame(number = 1) {
   return {
+    number,
     players: [
       { name: "Jugador 1", score: 0, innings: 0, bestRun: 0 },
       { name: "Jugador 2", score: 0, innings: 0, bestRun: 0 },

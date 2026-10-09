@@ -14,7 +14,7 @@ export const LEAD_SECONDS = 10;
 const ZOOM_STEPS = [1, 1.5, 2, 3, 4, 6];
 const MAX_ZOOM = ZOOM_STEPS[ZOOM_STEPS.length - 1];
 
-let clip = null;          // { url, start_ms, end_ms, moment_ms }
+let clip = null;          // { url, clip, start_ms, end_ms, moment_ms, fps, play_id }
 let lastTouchAt = 0;
 let onClose = () => {};
 let notify = () => {};
@@ -34,13 +34,16 @@ export function setup(opts) {
 }
 
 // moment: hora real (ms) de la imagen que se veía al pulsar.
-// info: { table, turnName, score, innings, recLabel, recOk }
-// opts (historial): { range: [inicio, fin], title, caption, backLabel, onBack,
-//   autoReturnMs, nav: { prev, next } }
+// info: { table, turnName, score, innings, recLabel, recOk, meta }
+// opts:
+//   range: [inicio, fin]  tramo del historial (sin marca de jugada)
+//   clip: { url, start_ms, end_ms, moment_ms, fps }  jugada guardada, sin armar nada
+//   play: { id, protected }  jugada de la lista JUGADAS
+//   title, sub, caption, backLabel, onBack, autoReturnMs, nav: { prev, next }
 export async function open(momentMs, info, opts = {}) {
   const mine = ++request;
   mode = opts;
-  const fromHistory = Boolean(opts.range);
+  const fromHistory = Boolean(opts.range) && !opts.play;
   view.hidden = false;
   lastTouchAt = Date.now();
   clip = null;
@@ -48,16 +51,17 @@ export async function open(momentMs, info, opts = {}) {
   video.load();
   resetZoom();
   setRate(1);
+  setSaved(Boolean(opts.play && opts.play.protected));
   $("rp-word").textContent = opts.title || "REPETICIÓN";
   $("rp-card-caption").textContent = opts.caption || "Jugada";
   $("rp-back-main").textContent = opts.backLabel || "VOLVER A LA PARTIDA";
   $("rp-nav").hidden = !opts.nav;
   $("rp-mark").hidden = fromHistory;
-  $("rp-msg").textContent = fromHistory ? "Buscando la grabación…" : "Preparando la repetición…";
+  $("rp-msg").textContent = fromHistory || opts.play ? "Buscando la grabación…" : "Preparando la repetición…";
   $("rp-msg").hidden = false;
-  $("rp-sub").textContent = fromHistory
+  $("rp-sub").textContent = opts.sub || (fromHistory
     ? `Mesa ${info.table} · ${dayLabel(momentMs)} · ${hm(momentMs)}`
-    : `Mesa ${info.table} · Jugada de las ${time(momentMs)}`;
+    : `Mesa ${info.table} · Jugada de las ${time(momentMs)}`);
   $("rp-time").textContent = fromHistory ? hm(momentMs) : time(momentMs);
   $("rp-turn").textContent = info.turnName ? `Turno de ${info.turnName}` : "";
   $("rp-score").textContent = info.score
@@ -66,21 +70,26 @@ export async function open(momentMs, info, opts = {}) {
   setRec(info.recLabel, info.recOk);
   ["rp-from", "rp-to", "rp-moment", "rp-clock"].forEach((id) => { $(id).textContent = ""; });
 
-  const body = { moment_ms: Math.round(momentMs) };
-  if (fromHistory) [body.start_ms, body.end_ms] = opts.range.map(Math.round);
   let data;
-  try {
-    const res = await fetch("/api/replay", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    data = await res.json();
-    if (!res.ok) throw new Error(data.error || "error");
-  } catch (e) {
-    if (mine !== request) return;
-    $("rp-msg").textContent = `No se pudo abrir la grabación. ${e.message === "error" ? "" : e.message}`;
-    return;
+  if (opts.clip) {
+    data = opts.clip;
+  } else {
+    const body = { moment_ms: Math.round(momentMs) };
+    if (opts.range) [body.start_ms, body.end_ms] = opts.range.map(Math.round);
+    else if (info.meta) body.meta = info.meta;
+    try {
+      const res = await fetch("/api/replay", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      data = await res.json();
+      if (!res.ok) throw new Error(data.error || "error");
+    } catch (e) {
+      if (mine !== request) return;
+      $("rp-msg").textContent = `No se pudo abrir la grabación. ${e.message === "error" ? "" : e.message}`;
+      return;
+    }
   }
   if (mine !== request || view.hidden) return;
   clip = data;
@@ -102,6 +111,63 @@ export async function open(momentMs, info, opts = {}) {
     video.play().catch(() => {});
     $("rp-msg").hidden = true;
   }, { once: true });
+}
+
+// ---------- GUARDAR JUGADA ----------
+
+let saving = false;
+
+function setSaved(saved) {
+  const b = $("rp-save");
+  b.classList.toggle("done", saved);
+  b.querySelector("span").textContent = saved ? "JUGADA GUARDADA" : "GUARDAR JUGADA";
+}
+
+// Lo que se guarda depende de dónde se abrió la repetición:
+// REPETICIÓN o JUGADAS: esa jugada (ya anotada); HISTORIAL: el tramo que se ve.
+function saveBody() {
+  const id = (mode.play && mode.play.id) || clip.play_id;
+  if (id) return { play_id: id, clip: clip.clip };
+  return {
+    moment_ms: Math.round(clip.start_ms + video.currentTime * 1000),
+    start_ms: clip.start_ms,
+    end_ms: clip.end_ms,
+    source: "historial",
+    clip: clip.clip,
+  };
+}
+
+async function save() {
+  if (!clip) { notify("Espera a que cargue la grabación"); return; }
+  if ($("rp-save").classList.contains("done")) { notify("Esta jugada ya está guardada"); return; }
+  if (saving) return;
+  saving = true;
+  const mine = request;
+  notify("Guardando la jugada…");
+  try {
+    const play = await savePlay(saveBody());
+    if (mine === request) {
+      setSaved(true);
+      if (mode.play) mode.play.protected = true;
+      if (mode.onSaved) mode.onSaved(play);
+    }
+    notify(play.warning || "Jugada guardada. No se borra con el historial.");
+  } catch (e) {
+    notify(`No se pudo guardar la jugada. ${e.message}`);
+  } finally {
+    saving = false;
+  }
+}
+
+export async function savePlay(body) {
+  const res = await fetch("/api/plays", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || "");
+  return data;
 }
 
 const hm = (ms) => new Date(ms).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
@@ -202,7 +268,7 @@ document.querySelectorAll("#rp-speeds button").forEach((b) =>
 $("rp-back").addEventListener("click", () => close(!mode.onBack));
 $("rp-prev").addEventListener("click", () => mode.nav && mode.nav.prev());
 $("rp-next").addEventListener("click", () => mode.nav && mode.nav.next());
-$("rp-save").addEventListener("click", () => notify("Guardar jugada llega en una próxima actualización"));
+$("rp-save").addEventListener("click", save);
 view.addEventListener("pointerdown", () => { lastTouchAt = Date.now(); }, true);
 
 // Barra de tiempo: tocar o arrastrar para ir a ese momento.

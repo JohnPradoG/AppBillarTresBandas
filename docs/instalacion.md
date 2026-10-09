@@ -54,6 +54,9 @@ billar --config /etc/billar/billar.toml status   # GRABANDO
 billar --config /etc/billar/billar.toml events   # registro de eventos
 ls /srv/billar/video/<camara>/                   # un archivo por minuto
 systemctl status billar-live@<camara> billar-ui billar-kiosk
+billar --config /etc/billar/billar.toml verify-plays  # jugadas guardadas completas
 ```
+
+Las jugadas guardadas están en `/srv/billar/video/jugadas/` (una carpeta por mes). Son las únicas grabaciones que no se borran solas; para respaldarlas basta copiar esa carpeta.
 
 Prueba de corte de luz: desenchufar el equipo, volver a enchufarlo y comprobar sin tocar nada que vuelve a GRABANDO, que la pantalla vuelve sola a la vista Mesa y que `events` muestra "apagado inesperado" y "Grabación iniciada automáticamente".

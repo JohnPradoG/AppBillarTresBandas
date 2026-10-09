@@ -2,7 +2,7 @@
 
 Fase 1 crea las tablas de grabación (establishments, tables, cameras,
 recordings, segments, settings, system_events). Las demás tablas del diseño
-(partidas, jugadas, usuarios...) llegan en sus fases como nuevas migraciones.
+(jugadas en la 2; partidas, usuarios...) llegan en sus fases como nuevas migraciones.
 Todas las horas se guardan en milisegundos UTC.
 """
 
@@ -80,6 +80,34 @@ MIGRATIONS: list[str] = [
         notified INTEGER NOT NULL DEFAULT 0
     );
     CREATE INDEX system_events_ts ON system_events (ts);
+    """,
+    # 2: jugadas (Fase 5). Cada REPETICIÓN queda anotada; GUARDAR JUGADA la
+    # protege con una copia propia que la limpieza nunca borra.
+    """
+    CREATE TABLE plays (
+        id TEXT PRIMARY KEY,
+        camera_id TEXT NOT NULL REFERENCES cameras(id),
+        table_number INTEGER NOT NULL,
+        moment_ms INTEGER NOT NULL,
+        start_ms INTEGER NOT NULL,
+        end_ms INTEGER NOT NULL,
+        source TEXT NOT NULL CHECK (source IN ('repeticion', 'pantalla', 'historial')),
+        game_number INTEGER,
+        turn_player TEXT,
+        player1 TEXT,
+        player2 TEXT,
+        score1 INTEGER,
+        score2 INTEGER,
+        innings INTEGER,
+        created_at INTEGER NOT NULL,
+        protected_at INTEGER,
+        path TEXT,
+        bytes INTEGER,
+        sha256 TEXT,
+        fps REAL
+    );
+    CREATE INDEX plays_moment ON plays (moment_ms);
+    CREATE INDEX plays_protected ON plays (protected_at);
     """,
 ]
 

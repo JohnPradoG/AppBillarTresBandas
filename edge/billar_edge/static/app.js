@@ -1,6 +1,7 @@
 // Vista Mesa: video con retraso, marcador, relojes y estado de la grabación.
 import { EDGE_LAG, correction } from "./delay.js";
 import * as history from "./history.js";
+import * as jugadas from "./jugadas.js";
 import * as replay from "./replay.js";
 import * as sb from "./scoreboard.js";
 
@@ -47,6 +48,7 @@ function renderStatus() {
   rec.className = `rec ${ok ? "ok" : "bad"}`;
   $("rec-label").textContent = label;
   replay.setRec(label, ok);
+  jugadas.setRec(label, ok);
 }
 
 // ---------- video con retraso ----------
@@ -250,33 +252,77 @@ $("new-game").addEventListener("click", () => { $("menu").hidden = true; $("conf
 $("confirm-no").addEventListener("click", () => { $("confirm").hidden = true; });
 $("confirm-yes").addEventListener("click", () => {
   $("confirm").hidden = true;
-  game = sb.newGame();
+  game = sb.newGame((game.number || 1) + 1);
   update(() => {});
 });
-// REPETICIÓN: el momento es la imagen que se estaba viendo (hora − retraso real).
-$("replay-btn").addEventListener("click", () => {
+// El momento de una jugada es la imagen que se estaba viendo (hora − retraso real).
+function shownMoment() {
   const lat = hls && Number.isFinite(hls.latency) && video.readyState >= 2 ? hls.latency + EDGE_LAG : target;
+  return Date.now() - lat * 1000;
+}
+
+// Datos del marcador que quedan con la jugada.
+function gameMeta() {
+  return {
+    game_number: game.number || 1,
+    turn_player: game.turn === null ? null : game.players[game.turn].name,
+    player1: game.players[0].name,
+    player2: game.players[1].name,
+    score1: game.players[0].score,
+    score2: game.players[1].score,
+    innings: sb.innings(game),
+  };
+}
+
+$("replay-btn").addEventListener("click", () => {
   const turn = game.turn === null ? null : game.players[game.turn].name;
-  replay.open(Date.now() - lat * 1000, {
+  replay.open(shownMoment(), {
     table: server ? server.table_number : "",
     turnName: turn,
     score: game.players.map((p) => p.score),
     innings: sb.innings(game),
     recLabel: $("rec-label").textContent,
     recOk: $("rec").classList.contains("ok"),
+    meta: gameMeta(),
   });
 });
-// Volver a la partida desde la repetición también cierra el historial.
-replay.setup({ onClose: () => { history.close(); lastTouchAt = Date.now(); }, toast });
-$("open-history").addEventListener("click", () => {
-  $("menu").hidden = true;
-  history.open({
-    table: server ? server.table_number : "",
-    recLabel: $("rec-label").textContent,
-    recOk: $("rec").classList.contains("ok"),
-  });
+// Volver a la partida desde la repetición también cierra el historial y JUGADAS.
+replay.setup({ onClose: () => { history.close(); jugadas.close(); lastTouchAt = Date.now(); }, toast });
+
+const tableInfo = () => ({
+  table: server ? server.table_number : "",
+  recLabel: $("rec-label").textContent,
+  recOk: $("rec").classList.contains("ok"),
 });
-$("save-btn").addEventListener("click", () => toast("Guardar jugada llega en una próxima actualización"));
+function openHistory() {
+  jugadas.close();
+  history.open(tableInfo());
+}
+jugadas.setup({ toast, openHistory });
+$("open-history").addEventListener("click", () => { $("menu").hidden = true; openHistory(); });
+$("open-plays").addEventListener("click", () => { $("menu").hidden = true; jugadas.open(tableInfo()); });
+
+// GUARDAR JUGADA desde la partida: protege 30 s antes y 15 s después de lo
+// que se ve en pantalla, con el marcador de ese momento.
+let savingPlay = false;
+$("save-btn").addEventListener("click", async () => {
+  if (savingPlay) { toast("Ya se está guardando la jugada…"); return; }
+  savingPlay = true;
+  const btn = $("save-btn");
+  btn.classList.add("busy");
+  const moment = shownMoment();
+  const at = new Date(moment).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" });
+  toast(`Guardando la jugada de las ${at}…`);
+  try {
+    const play = await replay.savePlay({ moment_ms: Math.round(moment), source: "pantalla", meta: gameMeta() });
+    toast(play.warning || `Jugada de las ${at} guardada. Está en JUGADAS.`);
+  } catch (e) {
+    toast(`No se pudo guardar la jugada. ${e.message}`);
+  } finally {
+    savingPlay = false;
+    btn.classList.remove("busy");
+  }
+});
 // Sin menú contextual ni zoom con dos dedos en la pantalla táctil.
 document.addEventListener("contextmenu", (e) => e.preventDefault());
 
@@ -324,7 +370,7 @@ function renderRest() {
 
 function checkRest() {
   if (resting) renderRest();
-  else if (!replay.isOpen() && !history.isOpen() && Date.now() - lastTouchAt >= idleMs()) enterRest();
+  else if (!replay.isOpen() && !history.isOpen() && !jugadas.isOpen() && Date.now() - lastTouchAt >= idleMs()) enterRest();
 }
 
 // Captura: el toque que despierta la pantalla no marca carambolas ni toma el turno.

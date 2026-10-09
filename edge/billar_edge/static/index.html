@@ -108,6 +108,7 @@
     <div class="delay-row" id="delay-row"></div>
     <p class="hint">La grabación no cambia: solo cuánto tiempo después ves la jugada en pantalla.</p>
     <h3>Grabaciones</h3>
+    <button class="wide" id="open-plays">Jugadas (repeticiones y guardadas)</button>
     <button class="wide" id="open-history">Historial de los últimos días</button>
     <h3>Partida</h3>
     <button class="wide" id="new-game">Nueva partida</button>
@@ -148,6 +149,46 @@
     <p class="hs-empty" id="hs-msg" hidden></p>
   </div>
 </section>
+
+<section class="plays-view" id="plays" hidden aria-label="Jugadas">
+  <header class="hs-head pl-head">
+    <div class="rp-title">
+      <span class="pl-word">JUGADAS</span>
+      <span class="rp-sub" id="pl-sub"></span>
+    </div>
+    <div class="pl-right">
+      <span class="pl-brand">VANO SYSTEMS</span>
+      <div class="rec" id="pl-rec"><span class="dot"></span><span id="pl-rec-label"></span></div>
+      <button class="hs-close" id="pl-close">VOLVER A LA PARTIDA</button>
+    </div>
+  </header>
+  <div class="pl-filters">
+    <button data-filter="date" id="pl-f-date"></button>
+    <button data-filter="hour" id="pl-f-hour"></button>
+    <button class="pl-static" id="pl-f-table" disabled></button>
+    <button data-filter="player" id="pl-f-player"></button>
+    <button data-filter="game" id="pl-f-game"></button>
+    <button class="pl-only" id="pl-f-protected"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg><span>Solo protegidas</span></button>
+    <div class="pl-gap"></div>
+    <button class="pl-history" id="pl-to-history">Buscar por hora en el historial</button>
+  </div>
+  <div class="pl-table">
+    <div class="pl-row pl-th">
+      <span>Hora</span><span>Jugador en turno</span><span>Mesa</span><span>Partida</span><span>Marcador</span><span>Estado</span><span></span>
+    </div>
+    <div class="pl-rows" id="pl-rows"></div>
+    <p class="hs-empty pl-empty" id="pl-msg" hidden></p>
+  </div>
+  <footer class="pl-foot" id="pl-foot"></footer>
+</section>
+
+<div class="sheet" id="pl-picker" hidden>
+  <div class="sheet-card pl-picker-card" role="dialog" aria-modal="true" aria-labelledby="pl-picker-title">
+    <h2 id="pl-picker-title"></h2>
+    <div class="pl-choices" id="pl-choices"></div>
+    <button class="wide close" id="pl-picker-close">Cerrar</button>
+  </div>
+</div>
 
 <section class="replay-view" id="replay" hidden aria-label="Repetición">
   <header class="rp-head">

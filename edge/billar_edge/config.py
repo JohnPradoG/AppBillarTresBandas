@@ -34,6 +34,11 @@ class Config:
     stall_seconds: int = 15
     # Segundos con imagen negra o congelada antes de alertar "sin señal".
     no_signal_seconds: int = 30
+    # Jugadas protegidas: copias propias que la limpieza nunca borra, en el
+    # disco de video (por defecto <recordings_dir>/jugadas). Se avisa cuando
+    # ocupan más de este espacio.
+    protected_dir: Path | None = None
+    protected_quota_gb: float = 100.0
     # Exigir que la carpeta de video sea un disco o partición montada, para no
     # llenar el disco del sistema si el disco de video falta.
     require_mount: bool = False
@@ -62,6 +67,10 @@ class Config:
     def camera_run_dir(self, camera_id: str) -> Path:
         return self.run_dir / camera_id
 
+    @property
+    def plays_dir(self) -> Path:
+        return self.protected_dir or self.recordings_dir / "jugadas"
+
     def live_dir(self, camera_id: str) -> Path:
         return self.camera_run_dir(camera_id) / "live"
 
@@ -88,6 +97,8 @@ def load(path: str | os.PathLike | None = None) -> Config:
         raise ValueError("La configuración no tiene ninguna cámara ([[cameras]]).")
     if len({c.id for c in cameras}) != len(cameras):
         raise ValueError("Hay cámaras con el mismo id.")
+    if any(c.id == "jugadas" for c in cameras):
+        raise ValueError("Una cámara no puede llamarse 'jugadas': es la carpeta de las jugadas guardadas.")
     return Config(
         data_dir=Path(general.get("data_dir", "/var/lib/billar")),
         recordings_dir=Path(general.get("recordings_dir", "/srv/billar/video")),
@@ -100,6 +111,8 @@ def load(path: str | os.PathLike | None = None) -> Config:
         stall_seconds=int(recorder.get("stall_seconds", 15)),
         no_signal_seconds=int(recorder.get("no_signal_seconds", 30)),
         require_mount=bool(storage.get("require_mount", False)),
+        protected_dir=Path(storage["protected_dir"]) if storage.get("protected_dir") else None,
+        protected_quota_gb=float(storage.get("protected_quota_gb", 100)),
         ffmpeg=recorder.get("ffmpeg", "ffmpeg"),
         ffprobe=recorder.get("ffprobe", "ffprobe"),
         ui_host=ui.get("host", "127.0.0.1"),

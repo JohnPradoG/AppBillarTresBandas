@@ -12,15 +12,16 @@ import json
 import logging
 import mimetypes
 import re
+import threading
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from datetime import date
 from urllib.parse import parse_qs, urlparse
 
-from . import __version__, history, replay, settings, statefile
+from . import __version__, history, plays, replay, settings, statefile
 from .config import Config
-from .db import connect, now_ms
+from .db import connect, ensure_camera, now_ms
 from .health import STALE_STATE_SECONDS
 
 log = logging.getLogger("billar.web")
@@ -45,6 +46,8 @@ TYPES = {
 class App:
     def __init__(self, cfg: Config):
         self.cfg = cfg
+        # Un guardado a la vez: dos toques seguidos no hacen dos copias.
+        self.save_lock = threading.Lock()
 
     def state(self) -> dict:
         conn = connect(self.cfg.db_path)
@@ -96,19 +99,98 @@ class App:
             conn.close()
         return {**data, "days": days, "now_ms": now_ms()}
 
-    def build_replay(self, moment_ms: int, start_ms: int | None = None, end_ms: int | None = None) -> dict:
+    def build_replay(self, moment_ms: int, start_ms: int | None = None, end_ms: int | None = None,
+                     meta: dict | None = None) -> dict:
         cam = self.cfg.cameras[0]
+        play_id = None
         if start_ms is None or end_ms is None:
             clip = replay.build(self.cfg, cam.id, moment_ms)
+            # Cada REPETICIÓN queda anotada en JUGADAS (sin proteger).
+            conn = connect(self.cfg.db_path)
+            try:
+                play_id = plays.record(conn, self.cfg, cam.id, clip.moment_ms, clip.start_ms, clip.end_ms,
+                                       "repeticion", meta)
+            finally:
+                conn.close()
         else:
             clip = replay.build_range(self.cfg, cam.id, start_ms, end_ms, moment_ms)
         return {
             "url": f"/repeticion/{clip.path.name}",
+            "clip": clip.path.name,
             "start_ms": clip.start_ms,
             "end_ms": clip.end_ms,
             "moment_ms": clip.moment_ms,
             "fps": clip.fps,
+            "play_id": play_id,
         }
+
+    def save_play(self, body: dict) -> dict:
+        """GUARDAR JUGADA. Con play_id protege una jugada ya anotada (la de la
+        REPETICIÓN); sin él anota y protege una nueva: desde la partida
+        (−30/+15 s del momento en pantalla) o desde el historial (el tramo
+        que se está viendo)."""
+        with self.save_lock:
+            return self._save_play(body)
+
+    def _save_play(self, body: dict) -> dict:
+        cam = self.cfg.cameras[0]
+        clip_file = replay.clip_path(self.cfg, body["clip"]) if body.get("clip") else None
+        conn = connect(self.cfg.db_path)
+        try:
+            play_id = body.get("play_id")
+            if not play_id:
+                source = body.get("source", "pantalla")
+                moment_ms = int(body["moment_ms"])
+                if "start_ms" in body and "end_ms" in body:
+                    start_ms, end_ms = int(body["start_ms"]), int(body["end_ms"])
+                    if not 0 < end_ms - start_ms <= replay.MAX_RANGE_MS:
+                        raise ValueError("El tramo a guardar no es válido.")
+                else:
+                    clip = replay.build(self.cfg, cam.id, moment_ms)
+                    clip_file, start_ms, end_ms = clip.path, clip.start_ms, clip.end_ms
+                play_id = plays.record(conn, self.cfg, cam.id, moment_ms, start_ms, end_ms, source,
+                                       body.get("meta"))
+            row = plays.protect(conn, self.cfg, str(play_id), clip_file)
+            used = plays.usage_bytes(self.cfg)
+            quota = int(self.cfg.protected_quota_gb * 1024 ** 3)
+            out = plays.public(row, self.cfg)
+            if used > quota:
+                out["warning"] = (f"Las jugadas guardadas ocupan {used / 1024 ** 3:.0f} GB, más de los "
+                                  f"{self.cfg.protected_quota_gb:.0f} GB previstos.")
+            return out
+        finally:
+            conn.close()
+
+    def list_plays(self, query: dict) -> dict:
+        one = lambda k: (query.get(k) or [None])[0] or None  # noqa: E731
+        day = one("date")
+        bounds = history.day_bounds(date.fromisoformat(day)) if day else (None, None)
+        hour = int(one("hour")) if one("hour") is not None else None
+        game = int(one("game")) if one("game") is not None else None
+        now = now_ms()
+        conn = connect(self.cfg.db_path)
+        try:
+            rows = plays.search(conn, self.cfg, now, bounds[0], bounds[1], hour, one("player"), game,
+                                one("protected") == "1")
+            opts = plays.options(conn, self.cfg, now)
+        finally:
+            conn.close()
+        return {
+            "plays": rows,
+            "options": opts,
+            "usage_bytes": plays.usage_bytes(self.cfg),
+            "quota_bytes": int(self.cfg.protected_quota_gb * 1024 ** 3),
+            "now_ms": now,
+        }
+
+    def play_file(self, name: str) -> Path | None:
+        if not name.endswith(".mp4") or not SAFE_NAME.match(name):
+            return None
+        conn = connect(self.cfg.db_path)
+        try:
+            return plays.file_path(conn, self.cfg, name[:-4])
+        finally:
+            conn.close()
 
     def live_file(self, camera_id: str, name: str) -> Path | None:
         if not SAFE_NAME.match(camera_id) or not SAFE_NAME.match(name):
@@ -145,6 +227,16 @@ def make_handler(app: App):
                     return self._json(app.history(day))
                 except ValueError as e:
                     return self._json({"error": str(e)}, HTTPStatus.BAD_REQUEST)
+            if path == "/api/plays":
+                try:
+                    return self._json(app.list_plays(parse_qs(urlparse(self.path).query)))
+                except ValueError as e:
+                    return self._json({"error": str(e)}, HTTPStatus.BAD_REQUEST)
+            if path.startswith("/jugada/"):
+                f = app.play_file(path.split("/", 2)[2])
+                if f is None:
+                    return self._error(HTTPStatus.NOT_FOUND)
+                return self._file(f, cache="no-cache")
             if path.startswith("/live/"):
                 parts = path.split("/")
                 if len(parts) == 4:
@@ -164,6 +256,8 @@ def make_handler(app: App):
 
         def do_POST(self):
             path = urlparse(self.path).path
+            if path == "/api/plays":
+                return self._save_play()
             if path != "/api/replay":
                 return self._error(HTTPStatus.NOT_FOUND)
             try:
@@ -171,16 +265,36 @@ def make_handler(app: App):
                 moment_ms = int(body["moment_ms"])
                 start_ms = int(body["start_ms"]) if "start_ms" in body else None
                 end_ms = int(body["end_ms"]) if "end_ms" in body else None
+                meta = body.get("meta") if isinstance(body.get("meta"), dict) else None
             except (ValueError, KeyError, TypeError) as e:
                 return self._json({"error": str(e)}, HTTPStatus.BAD_REQUEST)
             try:
-                clip = app.build_replay(moment_ms, start_ms, end_ms)
+                clip = app.build_replay(moment_ms, start_ms, end_ms, meta)
             except ValueError as e:
                 return self._json({"error": str(e)}, HTTPStatus.BAD_REQUEST)
             except replay.NoRecording as e:
                 return self._json({"error": str(e)}, HTTPStatus.NOT_FOUND)
             log.info("Repetición de %s armada", clip["moment_ms"])
             return self._json(clip)
+
+        def _save_play(self):
+            try:
+                body = self._body()
+                if body.get("meta") is not None and not isinstance(body["meta"], dict):
+                    raise TypeError("meta debe ser un objeto")
+                play = app.save_play(body)
+            except (ValueError, KeyError, TypeError) as e:
+                return self._json({"error": str(e)}, HTTPStatus.BAD_REQUEST)
+            except replay.NoRecording as e:
+                return self._json({"error": str(e)}, HTTPStatus.NOT_FOUND)
+            except plays.PlayError as e:
+                return self._json({"error": str(e)}, HTTPStatus.CONFLICT)
+            except OSError as e:
+                log.exception("No se pudo guardar la jugada")
+                return self._json({"error": f"No se pudo escribir la jugada en el disco ({e.strerror})."},
+                                  HTTPStatus.INTERNAL_SERVER_ERROR)
+            log.info("Jugada %s guardada", play["id"])
+            return self._json(play)
 
         def do_PUT(self):
             path = urlparse(self.path).path
@@ -260,6 +374,14 @@ def make_handler(app: App):
 
 
 def make_server(cfg: Config, host: str | None = None, port: int | None = None) -> ThreadingHTTPServer:
+    # Las jugadas apuntan a la cámara: que esté registrada aunque el grabador
+    # todavía no haya arrancado.
+    conn = connect(cfg.db_path)
+    try:
+        for cam in cfg.cameras:
+            ensure_camera(conn, cfg.establishment_name, cam)
+    finally:
+        conn.close()
     server = ThreadingHTTPServer((host or cfg.ui_host, cfg.ui_port if port is None else port),
                                  make_handler(App(cfg)))
     server.daemon_threads = True

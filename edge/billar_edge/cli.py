@@ -8,7 +8,7 @@ import sys
 from datetime import datetime
 
 from . import config as config_mod
-from . import events, health, live, recorder, retention, statefile, web
+from . import events, health, live, plays, recorder, retention, statefile, web
 from .db import connect
 
 
@@ -31,6 +31,7 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("status", help="muestra el estado actual")
     p = sub.add_parser("events", help="muestra el registro de eventos")
     p.add_argument("-n", type=int, default=30)
+    sub.add_parser("verify-plays", help="revisa que las jugadas guardadas existan y no hayan cambiado")
     sub.add_parser("check-config", help="valida el archivo de configuración")
     sub.add_parser("cameras", help="lista los ids de las cámaras configuradas")
     args = parser.parse_args(argv)
@@ -73,6 +74,14 @@ def main(argv: list[str] | None = None) -> int:
         for row in reversed(events.recent(conn, args.n)):
             cam = f" [{row['camera_id']}]" if row["camera_id"] else ""
             print(f"{_ts(row['ts'])}  {row['level']:<11}{cam} {row['message']}")
+    elif args.command == "verify-plays":
+        conn = connect(cfg.db_path)
+        total = conn.execute("SELECT COUNT(*) FROM plays WHERE protected_at IS NOT NULL").fetchone()[0]
+        problems = plays.verify(conn)
+        for p in problems:
+            print(f"{p['problema']}: {p['path']}")
+        print(f"Jugadas guardadas: {total}; con problemas: {len(problems)}")
+        return 2 if problems else 0
     elif args.command == "cameras":
         for cam in cfg.cameras:
             print(cam.id)
