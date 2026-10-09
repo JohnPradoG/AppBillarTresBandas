@@ -57,7 +57,7 @@ button:active { transform: scale(0.97); }
 .score { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; font-family: var(--cond); font-weight: 700; font-size: calc(300 * var(--u)); line-height: 1; }
 .quick { display: flex; flex-direction: column; gap: calc(8 * var(--u)); }
 .quick .caption, .stat .caption { color: var(--cap); }
-.quick-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: calc(10 * var(--u)); }
+.quick-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: calc(10 * var(--u)); }
 .quick-row button { height: calc(64 * var(--u)); border-radius: calc(12 * var(--u)); border: 2px solid var(--btn-line); background: var(--btn); color: var(--dark); font-size: calc(28 * var(--u)); font-weight: 600; }
 .stats { display: grid; grid-template-columns: 1fr 1fr; gap: calc(12 * var(--u)); }
 .stat { border-radius: calc(12 * var(--u)); background: var(--btn); padding: calc(12 * var(--u)) calc(16 * var(--u)); display: flex; flex-direction: column; }
