@@ -61,7 +61,10 @@ button:active { transform: scale(0.97); }
 .quick { display: flex; flex-direction: column; gap: calc(8 * var(--u)); }
 .quick .caption, .stat .caption { color: var(--cap); }
 .quick-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: calc(10 * var(--u)); }
-.quick-row button { height: calc(64 * var(--u)); border-radius: calc(12 * var(--u)); border: 2px solid var(--btn-line); background: var(--btn); color: var(--dark); font-size: calc(28 * var(--u)); font-weight: 600; }
+/* Teclado tipo calculadora: +1 destacado, −1 ancho en la segunda fila. */
+.quick-row .plus { background: var(--dark); border-color: var(--dark); color: #FFFFFF; }
+.quick-row .minus { grid-column: span 2; }
+.quick-row button { height: calc(84 * var(--u)); border-radius: calc(12 * var(--u)); border: 2px solid var(--btn-line); background: var(--btn); color: var(--dark); font-size: calc(36 * var(--u)); font-weight: 600; }
 .stats { display: grid; grid-template-columns: 1fr 1fr; gap: calc(12 * var(--u)); }
 .stat { border-radius: calc(12 * var(--u)); background: var(--btn); padding: calc(12 * var(--u)) calc(16 * var(--u)); display: flex; flex-direction: column; }
 .p1 .stat { background: #FFFFFF; }
