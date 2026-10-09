@@ -37,7 +37,7 @@ button:active { transform: scale(0.97); }
   border: calc(6 * var(--u)) solid transparent; display: flex; flex-direction: column; gap: calc(16 * var(--u));
 }
 .p1 { background: #E9ECE8; color: #121614; border-color: #E9ECE8; --btn: #FFFFFF; --btn-line: #9AA5A1; --cap: #4A5551; --dark: #121614; }
-.p2 { background: #E8A33A; color: #1B1206; border-color: #E8A33A; --btn: #F6C97F; --btn-line: #7A5410; --cap: #4A3412; --dark: #1B1206; }
+.p2 { background: #FFD21F; color: #1A1500; border-color: #FFD21F; --btn: #FFE878; --btn-line: #8A6C00; --cap: #4D3E00; --dark: #1A1500; }
 .panel.on-turn { border-color: var(--turn); }
 /* Altura fija: si la cabecera cambia de tamaño al tomar el turno, los botones se
    mueven bajo el dedo y el toque se pierde. */
@@ -46,7 +46,7 @@ button:active { transform: scale(0.97); }
 .name [data-name] { overflow: hidden; text-overflow: ellipsis; }
 .ball { width: calc(30 * var(--u)); height: calc(30 * var(--u)); border-radius: 50%; flex: none; }
 .ball.white { background: #FFFFFF; border: 2px solid #9AA5A1; }
-.ball.yellow { background: #F2C230; border: 2px solid #7A5410; }
+.ball.yellow { background: #FFD21F; border: 2px solid #8A6C00; }
 .turn-badge { flex: none; padding: calc(6 * var(--u)) calc(14 * var(--u)); border-radius: 999px; font-size: calc(18 * var(--u)); font-weight: 600; text-align: center; }
 .turn-badge.none { display: none; }
 .name [data-name] { overflow: hidden; text-overflow: ellipsis; }
