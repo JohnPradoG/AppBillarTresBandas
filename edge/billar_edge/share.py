@@ -31,7 +31,7 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from . import __version__, plays, replay
+from . import __version__, plays, replay, settings
 from .config import Config
 from .db import connect, now_ms
 
@@ -56,9 +56,9 @@ def _esc(path: Path) -> str:
     return str(path).replace("\\", "\\\\").replace(":", "\\:").replace("'", "\\'")
 
 
-def caption_lines(cfg: Config, play: sqlite3.Row) -> tuple[str, str]:
+def caption_lines(cfg: Config, play: sqlite3.Row, name: str | None = None) -> tuple[str, str]:
     when = datetime.fromtimestamp(play["moment_ms"] / 1000).strftime("%d/%m/%Y %H:%M:%S")
-    top = f"{cfg.establishment_name} · Mesa {play['table_number']}"
+    top = f"{name or cfg.establishment_name} · Mesa {play['table_number']}"
     bottom = when
     if play["player1"] and play["player2"] and play["score1"] is not None and play["score2"] is not None:
         bottom += f" · {play['player1']} {play['score1']} – {play['score2']} {play['player2']}"
@@ -156,7 +156,7 @@ def create(conn: sqlite3.Connection, cfg: Config, play_id: str, clip: Path | Non
                 raise ShareError(f"La grabación de esa jugada ya no está disponible. {e}") from e
         token = secrets.token_urlsafe(12)
         out = cfg.shares_dir / f"{token}.mp4"
-        render(cfg, src, out, caption_lines(cfg, play))
+        render(cfg, src, out, caption_lines(cfg, play, settings.display(conn, cfg)["establishment_name"]))
         conn.execute(
             "INSERT INTO shares (token, play_id, path, bytes, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?)",
             (token, play_id, str(out), out.stat().st_size, now, now + cfg.share_hours * HOUR_MS),
@@ -219,12 +219,12 @@ a.btn {{ display: block; margin: 18px 0 10px; padding: 16px; border-radius: 12px
 </main></body></html>"""
 
 
-def page_for(cfg: Config, row: sqlite3.Row | None, play: sqlite3.Row | None) -> str:
+def page_for(cfg: Config, row: sqlite3.Row | None, play: sqlite3.Row | None, name: str | None = None) -> str:
     if row is None or play is None:
         body = ("<h1>Este enlace ya venció</h1>"
                 "<p>Pide en la pantalla de la mesa que vuelvan a compartir la jugada.</p>")
         return PAGE.format(title="Enlace vencido", body=body)
-    top, bottom = caption_lines(cfg, play)
+    top, bottom = caption_lines(cfg, play, name)
     until = datetime.fromtimestamp(row["expires_at"] / 1000).strftime("%d/%m/%Y %H:%M")
     mp4 = f"/c/{row['token']}.mp4"
     name = f"jugada-{datetime.fromtimestamp(play['moment_ms'] / 1000).strftime('%Y%m%d-%H%M%S')}.mp4"
@@ -261,7 +261,7 @@ def make_share_handler(cfg: Config):
                     return self._video(Path(row["path"]))
                 play = plays.get(conn, row["play_id"]) if row else None
                 status = HTTPStatus.OK if row and play else HTTPStatus.GONE
-                return self._send(status, page_for(cfg, row, play).encode(), "text/html; charset=utf-8")
+                return self._send(status, page_for(cfg, row, play, settings.display(conn, cfg)["establishment_name"]).encode(), "text/html; charset=utf-8")
             finally:
                 conn.close()
 

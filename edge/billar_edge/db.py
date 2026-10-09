@@ -153,6 +153,28 @@ MIGRATIONS: list[str] = [
     CREATE INDEX shares_play ON shares (play_id, expires_at);
     CREATE INDEX shares_expires ON shares (expires_at);
     """,
+    # 5: usuarios con PIN y registro de auditoría (Fase 8).
+    """
+    CREATE TABLE users (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        role TEXT NOT NULL CHECK (role IN ('administrador', 'encargado', 'operador')),
+        pin_hash TEXT NOT NULL,
+        active INTEGER NOT NULL DEFAULT 1,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
+    );
+    CREATE TABLE audit_log (
+        id TEXT PRIMARY KEY,
+        ts INTEGER NOT NULL,
+        user_id TEXT,
+        user_name TEXT,
+        action TEXT NOT NULL,
+        detail TEXT NOT NULL,
+        data TEXT
+    );
+    CREATE INDEX audit_ts ON audit_log (ts);
+    """,
 ]
 
 

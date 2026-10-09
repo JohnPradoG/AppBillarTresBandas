@@ -111,6 +111,27 @@ def protect(conn: sqlite3.Connection, cfg: Config, play_id: str, clip: Path | No
     return get(conn, play_id)
 
 
+def unprotect(conn: sqlite3.Connection, cfg: Config, play_id: str) -> sqlite3.Row:
+    """Quita la protección: borra la copia y la jugada vuelve a depender de la
+    grabación (desaparece cuando esta se borre). Solo para administradores."""
+    row = get(conn, play_id)
+    if row is None:
+        raise PlayError("Esa jugada no existe.")
+    if not row["protected_at"]:
+        raise PlayError("Esa jugada no está protegida.")
+    if row["path"]:
+        path = Path(row["path"])
+        if path.resolve().is_relative_to(cfg.plays_dir.resolve()):
+            path.unlink(missing_ok=True)
+    conn.execute("UPDATE plays SET protected_at = NULL, path = NULL, bytes = NULL, sha256 = NULL WHERE id = ?",
+                 (play_id,))
+    return get(conn, play_id)
+
+
+def local_time(ms: int) -> str:
+    return datetime.fromtimestamp(ms / 1000).strftime("%d/%m/%Y %H:%M:%S")
+
+
 def _fsync_dir(path: Path) -> None:
     fd = os.open(path, os.O_RDONLY)
     try:

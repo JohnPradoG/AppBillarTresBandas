@@ -19,7 +19,7 @@ from pathlib import Path
 from datetime import date
 from urllib.parse import parse_qs, urlparse
 
-from . import __version__, games, history, plays, replay, settings, share, statefile
+from . import __version__, admin, games, history, plays, replay, settings, share, statefile
 from .config import Config
 from .db import connect, ensure_camera, now_ms
 from .health import STALE_STATE_SECONDS
@@ -50,11 +50,13 @@ class App:
         self.save_lock = threading.Lock()
         self.game_lock = threading.Lock()
         self.share_lock = threading.Lock()
+        self.admin = admin.AdminApi(cfg)
 
     def state(self) -> dict:
         conn = connect(self.cfg.db_path)
         try:
             delay = settings.get_delay(conn)
+            shown = settings.display(conn, self.cfg)
         finally:
             conn.close()
         status = statefile.read(self.cfg.run_dir / "status.json")
@@ -72,12 +74,13 @@ class App:
         return {
             "version": __version__,
             "server_time": now_ms(),
-            "establishment": self.cfg.establishment_name,
+            "establishment": shown["establishment_name"],
             "table_number": self.cfg.cameras[0].table_number,
             "cameras": cameras,
             "delay_seconds": delay,
             "delay_choices": list(settings.DELAY_CHOICES),
-            "idle_minutes": self.cfg.idle_minutes,
+            "idle_minutes": shown["idle_minutes"],
+            "shot_seconds": shown["shot_seconds"],
             "brand_contact": self.cfg.brand_contact,
             "status": None if stale else status,
         }
@@ -276,6 +279,8 @@ def make_handler(app: App):
 
         def do_GET(self):
             path = urlparse(self.path).path
+            if path.startswith("/api/admin/"):
+                return self._admin("GET", path)
             if path == "/api/state":
                 return self._json(app.state())
             if path == "/api/history":
@@ -315,6 +320,8 @@ def make_handler(app: App):
 
         def do_POST(self):
             path = urlparse(self.path).path
+            if path.startswith("/api/admin/"):
+                return self._admin("POST", path)
             if path == "/api/plays":
                 return self._save_play()
             if path == "/api/share":
@@ -387,6 +394,8 @@ def make_handler(app: App):
 
         def do_PUT(self):
             path = urlparse(self.path).path
+            if path.startswith("/api/admin/"):
+                return self._admin("PUT", path)
             parts = path.split("/")
             if len(parts) in (4, 5) and parts[1:3] == ["api", "game"] and SAFE_NAME.match(parts[3]):
                 if len(parts) == 4:
@@ -401,6 +410,14 @@ def make_handler(app: App):
                 return self._json({"error": str(e)}, HTTPStatus.BAD_REQUEST)
             log.info("Retraso de pantalla cambiado a %s s", seconds)
             return self._json({"delay_seconds": seconds})
+
+        def _admin(self, method: str, path: str):
+            try:
+                body = self._body() if method != "GET" else {}
+            except (ValueError, TypeError) as e:
+                return self._json({"error": str(e)}, HTTPStatus.BAD_REQUEST)
+            status, data = app.admin.handle(method, path, self.headers.get("X-Sesion"), body)
+            return self._json(data, status)
 
         def _body(self) -> dict:
             length = int(self.headers.get("Content-Length", "0"))

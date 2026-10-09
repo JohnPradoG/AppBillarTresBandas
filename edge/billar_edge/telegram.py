@@ -17,9 +17,9 @@ import urllib.request
 import uuid
 from pathlib import Path
 
-from . import plays, share
+from . import admin, auth, plays, settings, share
 from .config import Config
-from .db import connect
+from .db import connect, now_ms
 
 log = logging.getLogger("billar.telegram")
 
@@ -65,6 +65,9 @@ class Bot:
     def handle(self, chat: int, text: str) -> None:
         parts = text.split(maxsplit=1)
         token = parts[1] if len(parts) == 2 and parts[0] == "/start" else None
+        if token and token.startswith("alertas_"):
+            self.link_alerts(chat, token.removeprefix("alertas_"))
+            return
         if token is None:
             self.call("sendMessage", {"chat_id": chat, "text":
                       "Hola. Para recibir una jugada, toca COMPARTIR en la pantalla de la mesa y escanea "
@@ -78,7 +81,7 @@ class Bot:
                 self.call("sendMessage", {"chat_id": chat, "text":
                           "Ese enlace ya venció. Pide que vuelvan a compartir la jugada desde la pantalla."})
                 return
-            top, bottom = share.caption_lines(self.cfg, play)
+            top, bottom = share.caption_lines(self.cfg, play, settings.display(conn, self.cfg)["establishment_name"])
             self.call("sendChatAction", {"chat_id": chat, "action": "upload_video"})
             with open(row["path"], "rb") as f:
                 self.call("sendVideo", {"chat_id": str(chat), "caption": f"{top}\n{bottom}\nVano Systems",
@@ -87,6 +90,46 @@ class Bot:
                           timeout=180)
             conn.execute("UPDATE shares SET telegram_sends = telegram_sends + 1 WHERE token = ?", (row["token"],))
             log.info("Jugada enviada por Telegram (enlace %s…)", row["token"][:6])
+        finally:
+            conn.close()
+
+
+    def link_alerts(self, chat: int, code: str) -> None:
+        """El dueño escaneó el QR de ADMINISTRACIÓN: este chat recibe las alertas."""
+        conn = connect(self.cfg.db_path)
+        try:
+            saved = settings.get_system(conn, settings.ALERT_CODE) or ""
+            want, _, until = saved.partition("|")
+            if not want or code != want or now_ms() > int(until or 0):
+                self.call("sendMessage", {"chat_id": chat, "text":
+                          "Ese código ya venció. Genera uno nuevo en ADMINISTRACIÓN > Alertas."})
+                return
+            settings.set_system(conn, settings.ALERT_CHAT, str(chat), "telegram")
+            settings.set_system(conn, settings.ALERT_CODE, "", "telegram")
+            # Solo lo que pase de aquí en adelante.
+            conn.execute("UPDATE system_events SET notified = 1 WHERE notified = 0")
+            auth.audit(conn, None, "alertas_vinculadas", "Se vinculó un chat de Telegram para las alertas")
+        finally:
+            conn.close()
+        self.call("sendMessage", {"chat_id": chat, "text":
+                  f"Listo. Aquí te llegarán las alertas de {self.cfg.establishment_name}: cámara "
+                  "desconectada, disco lleno, apagones y cuando todo vuelve a la normalidad."})
+
+    def send_alerts(self) -> int:
+        conn = connect(self.cfg.db_path)
+        try:
+            chat = settings.get_system(conn, settings.ALERT_CHAT)
+            if not chat:
+                return 0
+            name = settings.display(conn, self.cfg)["establishment_name"]
+            sent = 0
+            for ev in admin.pending_alerts(conn):
+                icon = {"error": "🔴", "advertencia": "🟠"}.get(ev["level"], "🟢")
+                self.call("sendMessage", {"chat_id": int(chat), "text":
+                          f"{icon} {name}: {ev['message']}\n{plays.local_time(ev['ts'])}"})
+                conn.execute("UPDATE system_events SET notified = 1 WHERE id = ?", (ev["id"],))
+                sent += 1
+            return sent
         finally:
             conn.close()
 
@@ -114,6 +157,7 @@ def main(cfg: Config) -> int:
     while True:
         try:
             bot.poll_once()
+            bot.send_alerts()
             wait = 5
         except (urllib.error.URLError, TimeoutError, OSError, RuntimeError) as e:
             # Sin Internet o Telegram caído: reintentar sin molestar al resto.
