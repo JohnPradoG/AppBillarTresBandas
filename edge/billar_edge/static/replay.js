@@ -19,8 +19,9 @@ let lastTouchAt = 0;
 let onClose = () => {};
 let notify = () => {};
 let request = 0;
+let mode = {};            // opciones de open(): repetición normal o minuto del historial
 
-const time = (ms) => new Date(ms).toLocaleTimeString("es-CO", { hour12: false });
+const time = (ms) => new Date(ms).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" });
 const rateLabel = (r) => `${String(r).replace(".", ",")}x`;
 
 export function isOpen() {
@@ -34,8 +35,12 @@ export function setup(opts) {
 
 // moment: hora real (ms) de la imagen que se veía al pulsar.
 // info: { table, turnName, score, innings, recLabel, recOk }
-export async function open(momentMs, info) {
+// opts (historial): { range: [inicio, fin], title, caption, backLabel, onBack,
+//   autoReturnMs, nav: { prev, next } }
+export async function open(momentMs, info, opts = {}) {
   const mine = ++request;
+  mode = opts;
+  const fromHistory = Boolean(opts.range);
   view.hidden = false;
   lastTouchAt = Date.now();
   clip = null;
@@ -43,54 +48,77 @@ export async function open(momentMs, info) {
   video.load();
   resetZoom();
   setRate(1);
-  $("rp-msg").textContent = "Preparando la repetición…";
+  $("rp-word").textContent = opts.title || "REPETICIÓN";
+  $("rp-card-caption").textContent = opts.caption || "Jugada";
+  $("rp-back-main").textContent = opts.backLabel || "VOLVER A LA PARTIDA";
+  $("rp-nav").hidden = !opts.nav;
+  $("rp-mark").hidden = fromHistory;
+  $("rp-msg").textContent = fromHistory ? "Buscando la grabación…" : "Preparando la repetición…";
   $("rp-msg").hidden = false;
-  $("rp-sub").textContent = `Mesa ${info.table} · Jugada de las ${time(momentMs)}`;
-  $("rp-time").textContent = time(momentMs);
+  $("rp-sub").textContent = fromHistory
+    ? `Mesa ${info.table} · ${dayLabel(momentMs)} · ${hm(momentMs)}`
+    : `Mesa ${info.table} · Jugada de las ${time(momentMs)}`;
+  $("rp-time").textContent = fromHistory ? hm(momentMs) : time(momentMs);
   $("rp-turn").textContent = info.turnName ? `Turno de ${info.turnName}` : "";
-  $("rp-score").textContent = `Marcador ${info.score[0]} – ${info.score[1]} · Entrada ${info.innings}`;
+  $("rp-score").textContent = info.score
+    ? `Marcador ${info.score[0]} – ${info.score[1]} · Entrada ${info.innings}`
+    : dayLabel(momentMs);
   setRec(info.recLabel, info.recOk);
   ["rp-from", "rp-to", "rp-moment", "rp-clock"].forEach((id) => { $(id).textContent = ""; });
 
+  const body = { moment_ms: Math.round(momentMs) };
+  if (fromHistory) [body.start_ms, body.end_ms] = opts.range.map(Math.round);
   let data;
   try {
     const res = await fetch("/api/replay", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ moment_ms: Math.round(momentMs) }),
+      body: JSON.stringify(body),
     });
     data = await res.json();
     if (!res.ok) throw new Error(data.error || "error");
   } catch (e) {
     if (mine !== request) return;
-    $("rp-msg").textContent = `No se pudo armar la repetición. ${e.message === "error" ? "" : e.message}`;
+    $("rp-msg").textContent = `No se pudo abrir la grabación. ${e.message === "error" ? "" : e.message}`;
     return;
   }
   if (mine !== request || view.hidden) return;
   clip = data;
-  $("rp-from").textContent = `${time(clip.start_ms)} · −${Math.round((clip.moment_ms - clip.start_ms) / 1000)} s`;
-  $("rp-to").textContent = `+${Math.round((clip.end_ms - clip.moment_ms) / 1000)} s · ${time(clip.end_ms)}`;
-  $("rp-moment").textContent = `JUGADA ${time(clip.moment_ms)}`;
-  const markPct = pct(clip.moment_ms);
-  $("rp-mark").style.left = `${markPct}%`;
-  $("rp-moment").style.left = `${Math.min(85, Math.max(15, markPct))}%`;
+  if (fromHistory) {
+    $("rp-from").textContent = time(clip.start_ms);
+    $("rp-to").textContent = time(clip.end_ms);
+  } else {
+    $("rp-from").textContent = `${time(clip.start_ms)} · −${Math.round((clip.moment_ms - clip.start_ms) / 1000)} s`;
+    $("rp-to").textContent = `+${Math.round((clip.end_ms - clip.moment_ms) / 1000)} s · ${time(clip.end_ms)}`;
+    $("rp-moment").textContent = `JUGADA ${time(clip.moment_ms)}`;
+    const markPct = pct(clip.moment_ms);
+    $("rp-mark").style.left = `${markPct}%`;
+    $("rp-moment").style.left = `${Math.min(85, Math.max(15, markPct))}%`;
+  }
   video.src = clip.url;
   video.addEventListener("loadedmetadata", () => {
-    video.currentTime = Math.max(0, (clip.moment_ms - clip.start_ms) / 1000 - LEAD_SECONDS);
+    video.currentTime = fromHistory ? 0 : Math.max(0, (clip.moment_ms - clip.start_ms) / 1000 - LEAD_SECONDS);
     video.playbackRate = currentRate;
     video.play().catch(() => {});
     $("rp-msg").hidden = true;
   }, { once: true });
 }
 
-export function close() {
+const hm = (ms) => new Date(ms).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+const dayLabel = (ms) => new Date(ms).toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long" });
+
+// toGame: true al volver a la partida (botón o tiempo sin tocar); false al
+// volver al historial.
+export function close(toGame = true) {
   request++;
   view.hidden = true;
   video.pause();
   video.removeAttribute("src");
   video.load();
   clip = null;
-  onClose();
+  const back = mode.onBack;
+  mode = {};
+  if (toGame || !back) onClose(); else back();
 }
 
 export function setRec(label, ok) {
@@ -147,9 +175,12 @@ function render() {
         ? `${timeMs(at)} · cuadro a cuadro`
         : `${time(at)} · ${rateLabel(currentRate)}`;
     }
-    const left = Math.ceil((AUTO_RETURN_MS - (Date.now() - lastTouchAt)) / 1000);
-    $("rp-back-sub").textContent = left <= 10 ? `Vuelve sola en ${Math.max(0, left)} s` : "Vuelve sola en 60 s sin tocar";
-    if (left <= 0) close();
+    const limit = mode.autoReturnMs || AUTO_RETURN_MS;
+    const left = Math.ceil((limit - (Date.now() - lastTouchAt)) / 1000);
+    $("rp-back-sub").textContent = left <= 10
+      ? `Vuelve a la partida en ${Math.max(0, left)} s`
+      : `Vuelve sola en ${limit / 1000} s sin tocar`;
+    if (left <= 0) close(true);
   }
   requestAnimationFrame(render);
 }
@@ -168,7 +199,9 @@ document.querySelectorAll(".rp-steps [data-frame]").forEach((b) =>
   b.addEventListener("click", () => frame(Number(b.dataset.frame))));
 document.querySelectorAll("#rp-speeds button").forEach((b) =>
   b.addEventListener("click", () => setRate(Number(b.dataset.rate))));
-$("rp-back").addEventListener("click", close);
+$("rp-back").addEventListener("click", () => close(!mode.onBack));
+$("rp-prev").addEventListener("click", () => mode.nav && mode.nav.prev());
+$("rp-next").addEventListener("click", () => mode.nav && mode.nav.next());
 $("rp-save").addEventListener("click", () => notify("Guardar jugada llega en una próxima actualización"));
 view.addEventListener("pointerdown", () => { lastTouchAt = Date.now(); }, true);
 

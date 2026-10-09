@@ -24,6 +24,12 @@ UUID=<uuid-de-la-particion>  /srv/billar/video  ext4  defaults,noatime,nofail  0
 
 `nofail` deja que el sistema arranque aunque el disco de video falle; en ese caso la pantalla muestra ERROR DE ALMACENAMIENTO y no se graba en el disco del sistema (`require_mount = true`).
 
+Zona horaria del equipo (la pantalla y el historial muestran la hora local; las grabaciones se guardan en UTC):
+
+```bash
+sudo timedatectl set-timezone America/Bogota
+```
+
 ## 3. Red
 
 - Cámara y mini PC conectados por cable (inyector PoE para una mesa, switch PoE para varias).

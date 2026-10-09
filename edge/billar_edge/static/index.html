@@ -107,6 +107,8 @@
     <h3>Retraso de la pantalla</h3>
     <div class="delay-row" id="delay-row"></div>
     <p class="hint">La grabación no cambia: solo cuánto tiempo después ves la jugada en pantalla.</p>
+    <h3>Grabaciones</h3>
+    <button class="wide" id="open-history">Historial de los últimos días</button>
     <h3>Partida</h3>
     <button class="wide" id="new-game">Nueva partida</button>
     <button class="wide close" id="menu-close">Cerrar</button>
@@ -124,10 +126,33 @@
   </div>
 </div>
 
+<section class="history-view" id="history" hidden aria-label="Historial">
+  <header class="hs-head">
+    <div class="rp-title">
+      <span class="hs-word">HISTORIAL</span>
+      <span class="rp-sub" id="hs-sub"></span>
+    </div>
+    <button class="hs-close" id="hs-close">VOLVER A LA PARTIDA</button>
+  </header>
+  <div class="hs-body">
+    <div class="hs-days" id="hs-days"></div>
+    <div class="hs-legend">
+      <span><i class="sw full"></i>Grabado</span>
+      <span><i class="sw part"></i>Con cortes</span>
+      <span><i class="sw none"></i>Sin grabación</span>
+    </div>
+    <h3 class="hs-step">1. Elige la hora</h3>
+    <div class="hs-hours" id="hs-hours"></div>
+    <h3 class="hs-step" id="hs-minutes-title">2. Elige el minuto</h3>
+    <div class="hs-minutes" id="hs-minutes"></div>
+    <p class="hs-empty" id="hs-msg" hidden></p>
+  </div>
+</section>
+
 <section class="replay-view" id="replay" hidden aria-label="Repetición">
   <header class="rp-head">
     <div class="rp-title">
-      <span class="rp-word">REPETICIÓN</span>
+      <span class="rp-word" id="rp-word">REPETICIÓN</span>
       <span class="rp-sub" id="rp-sub"></span>
     </div>
     <div class="rec" id="rp-rec"><span class="dot"></span><span id="rp-rec-label"></span></div>
@@ -187,10 +212,14 @@
     </div>
     <aside class="rp-side">
       <div class="rp-card">
-        <span class="caption">Jugada</span>
+        <span class="caption" id="rp-card-caption">Jugada</span>
         <span class="num rp-time" id="rp-time"></span>
         <span class="rp-turn" id="rp-turn"></span>
         <span class="rp-score" id="rp-score"></span>
+      </div>
+      <div class="rp-nav" id="rp-nav" hidden>
+        <button id="rp-prev">◀ Minuto anterior</button>
+        <button id="rp-next">Minuto siguiente ▶</button>
       </div>
       <div class="rp-spacer"></div>
       <button class="save rp-save" id="rp-save">
@@ -198,7 +227,7 @@
         <span>GUARDAR JUGADA</span>
       </button>
       <button class="rp-back" id="rp-back">
-        <span class="rp-back-main">VOLVER A LA PARTIDA</span>
+        <span class="rp-back-main" id="rp-back-main">VOLVER A LA PARTIDA</span>
         <span class="rp-back-sub" id="rp-back-sub">Vuelve sola en 60 s sin tocar</span>
       </button>
     </aside>

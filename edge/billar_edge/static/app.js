@@ -1,5 +1,6 @@
 // Vista Mesa: video con retraso, marcador, relojes y estado de la grabación.
 import { EDGE_LAG, correction } from "./delay.js";
+import * as history from "./history.js";
 import * as replay from "./replay.js";
 import * as sb from "./scoreboard.js";
 
@@ -113,7 +114,7 @@ function keepDelay() {
     }
     const at = new Date(Date.now() - lat * 1000);
     $("video-age").textContent =
-      `Imagen de hace ${Math.round(lat)} s · ${at.toLocaleTimeString("es-CO", { hour12: false })}`;
+      `Imagen de hace ${Math.round(lat)} s · ${at.toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" })}`;
   } else {
     $("video-age").textContent = "";
   }
@@ -265,7 +266,16 @@ $("replay-btn").addEventListener("click", () => {
     recOk: $("rec").classList.contains("ok"),
   });
 });
-replay.setup({ onClose: () => { lastTouchAt = Date.now(); }, toast });
+// Volver a la partida desde la repetición también cierra el historial.
+replay.setup({ onClose: () => { history.close(); lastTouchAt = Date.now(); }, toast });
+$("open-history").addEventListener("click", () => {
+  $("menu").hidden = true;
+  history.open({
+    table: server ? server.table_number : "",
+    recLabel: $("rec-label").textContent,
+    recOk: $("rec").classList.contains("ok"),
+  });
+});
 $("save-btn").addEventListener("click", () => toast("Guardar jugada llega en una próxima actualización"));
 // Sin menú contextual ni zoom con dos dedos en la pantalla táctil.
 document.addEventListener("contextmenu", (e) => e.preventDefault());
@@ -299,7 +309,7 @@ function leaveRest() {
 
 function renderRest() {
   const now = new Date();
-  $("rest-time").textContent = now.toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit", hour12: false });
+  $("rest-time").textContent = now.toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
   $("rest-place").textContent = server ? server.establishment : "";
   $("rest-table").textContent = server ? `Mesa ${server.table_number}` : "";
   // La grabación no se detiene en reposo; se indica para tranquilidad del dueño.
@@ -314,7 +324,7 @@ function renderRest() {
 
 function checkRest() {
   if (resting) renderRest();
-  else if (!replay.isOpen() && Date.now() - lastTouchAt >= idleMs()) enterRest();
+  else if (!replay.isOpen() && !history.isOpen() && Date.now() - lastTouchAt >= idleMs()) enterRest();
 }
 
 // Captura: el toque que despierta la pantalla no marca carambolas ni toma el turno.

@@ -105,3 +105,33 @@ def test_server_builds_and_serves_replay_with_ranges(cfg, conn, monkeypatch):
     finally:
         srv.shutdown()
         srv.server_close()
+
+
+@needs_ffmpeg
+def test_build_range_for_a_history_minute(cfg):
+    _segments(cfg)
+    clip = replay.build_range(cfg, "mesa1", T0 + 10_000, T0 + 40_000, T0 + 10_000,
+                              clock=lambda: (T0 + 600_000) / 1000)
+    assert clip.end_ms == T0 + 40_000 and abs(clip.start_ms - (T0 + 10_000)) <= 1000
+    with pytest.raises(ValueError):
+        replay.build_range(cfg, "mesa1", T0, T0 + 10 * 60_000, T0)
+
+
+@needs_ffmpeg
+def test_build_retries_with_a_shorter_end_when_the_last_fragment_is_incomplete(cfg, monkeypatch):
+    _segments(cfg)
+    real_cut = replay._cut
+    calls = []
+
+    def flaky(cfg_, out_dir, items):
+        calls.append(items[-1][2])
+        if len(calls) == 1:
+            return out_dir / "x.mp4", None, "partial file"
+        return real_cut(cfg_, out_dir, items)
+
+    monkeypatch.setattr(replay, "_cut", flaky)
+    now = T0 + 50_000
+    clip = replay.build_range(cfg, "mesa1", T0 + 40_000, T0 + 60_000, T0 + 40_000,
+                              clock=lambda: now / 1000, sleep=lambda _: None)
+    assert len(calls) == 2 and calls[1] == calls[0] - replay.RETRY_TRIM_MS / 1000
+    assert clip.end_ms == now - replay.WRITE_MARGIN_MS - replay.RETRY_TRIM_MS

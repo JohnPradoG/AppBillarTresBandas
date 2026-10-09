@@ -15,9 +15,10 @@ import re
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlparse
+from datetime import date
+from urllib.parse import parse_qs, urlparse
 
-from . import __version__, replay, settings, statefile
+from . import __version__, history, replay, settings, statefile
 from .config import Config
 from .db import connect, now_ms
 from .health import STALE_STATE_SECONDS
@@ -82,9 +83,25 @@ class App:
         finally:
             conn.close()
 
-    def build_replay(self, moment_ms: int) -> dict:
+    def history(self, day: str | None) -> dict:
+        today = date.today()
+        days = history.available_days(self.cfg, today)
+        chosen = date.fromisoformat(day) if day else today
+        if chosen.isoformat() not in days:
+            raise ValueError("Ese día ya no está en el historial.")
+        conn = connect(self.cfg.db_path)
+        try:
+            data = history.day_coverage(conn, self.cfg, self.cfg.cameras[0].id, chosen, now_ms())
+        finally:
+            conn.close()
+        return {**data, "days": days, "now_ms": now_ms()}
+
+    def build_replay(self, moment_ms: int, start_ms: int | None = None, end_ms: int | None = None) -> dict:
         cam = self.cfg.cameras[0]
-        clip = replay.build(self.cfg, cam.id, moment_ms)
+        if start_ms is None or end_ms is None:
+            clip = replay.build(self.cfg, cam.id, moment_ms)
+        else:
+            clip = replay.build_range(self.cfg, cam.id, start_ms, end_ms, moment_ms)
         return {
             "url": f"/repeticion/{clip.path.name}",
             "start_ms": clip.start_ms,
@@ -122,6 +139,12 @@ def make_handler(app: App):
             path = urlparse(self.path).path
             if path == "/api/state":
                 return self._json(app.state())
+            if path == "/api/history":
+                day = parse_qs(urlparse(self.path).query).get("date", [None])[0]
+                try:
+                    return self._json(app.history(day))
+                except ValueError as e:
+                    return self._json({"error": str(e)}, HTTPStatus.BAD_REQUEST)
             if path.startswith("/live/"):
                 parts = path.split("/")
                 if len(parts) == 4:
@@ -144,11 +167,16 @@ def make_handler(app: App):
             if path != "/api/replay":
                 return self._error(HTTPStatus.NOT_FOUND)
             try:
-                moment_ms = int(self._body()["moment_ms"])
+                body = self._body()
+                moment_ms = int(body["moment_ms"])
+                start_ms = int(body["start_ms"]) if "start_ms" in body else None
+                end_ms = int(body["end_ms"]) if "end_ms" in body else None
             except (ValueError, KeyError, TypeError) as e:
                 return self._json({"error": str(e)}, HTTPStatus.BAD_REQUEST)
             try:
-                clip = app.build_replay(moment_ms)
+                clip = app.build_replay(moment_ms, start_ms, end_ms)
+            except ValueError as e:
+                return self._json({"error": str(e)}, HTTPStatus.BAD_REQUEST)
             except replay.NoRecording as e:
                 return self._json({"error": str(e)}, HTTPStatus.NOT_FOUND)
             log.info("Repetición de %s armada", clip["moment_ms"])

@@ -3,7 +3,7 @@
 Sistema para mesas de billar a tres bandas: grabación continua 24/7, pantalla con retraso, repetición instantánea, historial de 7 días, jugadas protegidas y marcador. Funciona sin Internet. Desarrollado por Vano Systems.
 
 - Arquitectura aprobada: [documento de arquitectura](https://claude.ai/code/artifact/f57a7247-8ce0-4d0f-b59c-47cdc0c712d2)
-- Estado: **Fase 3, repetición** (incluye las Fases 1 y 2).
+- Estado: **Fase 4, historial** (incluye las Fases 1 a 3).
 
 ## Qué hace la Fase 1
 
@@ -36,6 +36,12 @@ La pantalla táctil muestra la vista Mesa del mockup aprobado: un jugador a cada
 3. La repetición empieza 10 s antes de la jugada, porque se pulsa después de verla. Tiene pausa, velocidades 1x, 0,5x, 0,25x y 0,1x, avance y retroceso cuadro a cuadro (para ver si una bola toca a la otra, con la hora al milisegundo), saltos de ±1 s y ±5 s, barra de tiempo con la marca de la jugada, zoom hasta 6x con botones, doble toque o pellizco, y desplazamiento arrastrando.
 4. Muestra la hora de la jugada, de quién era el turno y el marcador en ese momento.
 5. VOLVER A LA PARTIDA regresa a la imagen en vivo con retraso, que nunca se detuvo. Si nadie toca la pantalla durante 60 s, vuelve sola.
+
+## Qué hace la Fase 4
+
+1. En el menú, "Historial de los últimos días" abre la búsqueda: se elige el día (hoy y los 7 anteriores), la hora y el minuto.
+2. Cada hora muestra una barra con lo grabado y los huecos, y cada minuto se pinta verde (grabado), amarillo (con cortes) o gris (sin grabación, cámara desconectada o equipo apagado). Los datos salen del índice de segmentos (`GET /api/history?date=AAAA-MM-DD`) más el archivo que se está grabando.
+3. Al tocar un minuto se abre en el mismo reproductor de la repetición (cámara lenta, cuadro a cuadro, zoom), con botones para pasar al minuto anterior o siguiente grabado. "VOLVER AL HISTORIAL" regresa a la búsqueda; sin tocar la pantalla durante 3 minutos, vuelve sola a la partida.
 
 ## Estructura
 
